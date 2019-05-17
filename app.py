@@ -13,12 +13,11 @@ class GMBot:  # parent class for all GroupMe bots
         self.name = bot_name
         self.active = activate
 
-    @staticmethod
-    def send_message(msg):
+    def send_message(self, msg):
         url = "https://api.groupme.com/v3/bots/post"
 
         data = {
-            "bot_id": os.getenv("GM_BOT_ID"),
+            "bot_id": self.id,
             "text": msg
         }
 
@@ -40,8 +39,6 @@ class LFBot(GMBot):
 
 
 lf_bot = LFBot(os.getenv("LF_BOT_ID"), os.getenv("LF_BOT_NAME"))
-
-
 @app.route('/', methods=["POST"])
 def read_group():
     data = request.get_json()
