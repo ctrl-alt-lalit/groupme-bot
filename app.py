@@ -1,5 +1,4 @@
 import os
-import json
 
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
@@ -7,7 +6,7 @@ from flask import Flask, request
 
 app = Flask(__name__)
 @app.route('/', methods=["POST"])
-def read():
+def read_group():
     data = request.get_json()
 
     if ("@"+os.getenv("GM_BOT_NAME") in data["text"]) and (data["name"] != os.getenv("GM_BOT_NAME")):
@@ -25,8 +24,8 @@ def send_message(msg):
         "text": msg
     }
 
-    request = Request(url, urlencode(data).encode())
-    json = urlopen(request).read().decode()
+    request_msg = Request(url, urlencode(data).encode())
+    urlopen(request_msg).read().decode()
 
 
 def echo(data):
@@ -36,3 +35,5 @@ def echo(data):
         send_message(msg)
 
     return "done", 200
+
+
