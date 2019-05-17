@@ -15,7 +15,6 @@ class GMBot:  # parent class for all GroupMe bots
 
     def send_message(self, msg):
         url = "https://api.groupme.com/v3/bots/post"
-
         data = {
             "bot_id": self.id,
             "text": msg
@@ -24,7 +23,7 @@ class GMBot:  # parent class for all GroupMe bots
         request_msg = Request(url, urlencode(data).encode())
         urlopen(request_msg).read().decode()
 
-    def parse(self, data):  # meant to be overwritten by children
+    def chat(self, data):  # meant to be overwritten by children
         if ("@" + self.name in data["text"]) and (data["name"] != self.name):
             msg = "hi @{}".format(data["name"])
             self.send_message(msg)
@@ -32,15 +31,24 @@ class GMBot:  # parent class for all GroupMe bots
 
 # child classes
 class LFBot(GMBot):
-    def parse(self, data):
+    def chat(self, data):
         if ("@" + self.name in data["text"]) and (data["name"] != self.name):
-            msg = "hi @{}, you said {}".format(data["name"], data["text"])
+            msg = 'hi @{}, you said "{}"'.format(data["name"], data["text"])
             self.send_message(msg)
 
 
-lf_bot = LFBot(os.getenv("LF_BOT_ID"), os.getenv("LF_BOT_NAME"))
-@app.route('/', methods=["POST"])
-def read_group():
+# test bots
+test_bot = LFBot(os.getenv("TEST_BOT_ID"), os.getenv("TEST_BOT_NAME"))
+@app.route('/lf', methods=["POST"])
+def read_lf_group():
     data = request.get_json()
-    lf_bot.parse(data)
+    test_bot.chat(data)
+    return "done", 200
+
+
+concurrent_bot = LFBot(os.getenv("BC_BOT_ID"), os.getenv("BC_BOT_NAME"))  # testing multiple bots at once, it works!
+@app.route('/lf2', methods=["POST"])
+def read_lf_group2():
+    data = request.get_json()
+    concurrent_bot.chat(data)
     return "done", 200
