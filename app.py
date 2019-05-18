@@ -1,5 +1,4 @@
 import os
-
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from flask import Flask, request
@@ -25,33 +24,36 @@ class GMBot:  # parent class for all GroupMe bots
 
     def chat(self, data):  # meant to be overwritten by children
         if ("@" + self.name in data["text"]) and (data["name"] != self.name):
-            msg = "hi @{}".format(data["name"])
+            msg = "hi @{}, my creator forgot to tell me how to talk.".format(data["name"])
             self.send_message(msg)
 
 
 # child classes
 class LFBot(GMBot):
-    def chat(self, data):
+    def chat(self, data):  # do something with message bot just read
         if data["name"] != self.name:
             if "@" + self.name in data["text"]:
                 self.commands(data)
-            if data["name"] == "GroupMe":
+            elif data["name"] == "GroupMe":
                 self.group_events(data)
+            elif "best house" in data["text"]:
+                self.send_message("The mitochondria is the powerhouse of the cell")
+                self.send_message("and the powerhouse of honors is House Finnell!")
 
-    def commands(self, data):
+    def commands(self, data):  # someone @s the bot
         if "help" in data["text"]:
             msg = "@{}, I know the following commands: echo, faq".format(data["name"])
         elif "echo" in data["text"]:
             msg = 'hi @{}, you said "{}"'.format(data["name"], data["text"])
         elif "faq" in data["text"]:
-            msg = "Howdy! In order to keep the group from getting cluttered, we made a FAQ for y'all. Please read this first, but feel free to ask us additional questions/clarification. The FAQ is at the bottom is this document: {}\nbeep boop :)".format(os.getenv("FAQ_URL"))
+            msg = "Howdy! In order to keep the group from getting cluttered, we made a FAQ for y'all. Please read this first, but feel free to ask us additional questions. The FAQ is at the bottom is this document: {}\nbeep boop :)".format(os.getenv("FAQ_URL"))
         else:
             msg = "Sorry, I don't recognize that command.\nbeep boop :("
 
         self.send_message(msg)
 
-    def group_events(self, data):  # someone changes their nickname
-        if "renamed" in data["text"] or "changed name" in data["text"]:
+    def group_events(self, data):  # messages from the GroupMe client
+        if "renamed" in data["text"] or "changed name" in data["text"]:  # someone changes their nickname
             new_name = data['text'][data["text"].find("to")+3:]
             msg = "nice name! @{}".format(new_name)
             self.send_message(msg)
@@ -59,16 +61,18 @@ class LFBot(GMBot):
             new_user = data["text"][0: data["text"].find("has joined")-1]
             msg = "Howdy! @{}".format(new_user)
             self.send_message(msg)
-        elif "added" in data["text"]:  # support adding multiple users at once
+        elif "added" in data["text"]:  # one or more people get added to group
             new_users = data["text"][data["text"].find("added")+6: data["text"].find("to")-1]
             new_users = new_users.split(", ")
-            last_users = new_users[-1].split(" and ")
-            new_users[-1] = last_users[0]
-            new_users += [last_users[1]]
+            if " and " in new_users[-1]:
+                last_users = new_users[-1].split(" and ")
+                new_users[-1] = last_users[0]
+                new_users += [last_users[1]]
             msg = "Howdy! "
             for user in new_users:
                 msg += "@{} ".format(user)
             self.send_message(msg)
+
 
 
 # test bots
