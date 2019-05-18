@@ -2,9 +2,10 @@
 
 Each bot can do different things, including:
  - echoing what someone says
- - introducing itself when someone enters a groupchat
- - periodically linking a FAQ
+ - greeting someone when they first enter a groupchat
+ - periodically linking a document
+ - mention all the members of a group
 
 This program runs multiple bots concurrently. Each bot is its own object with a unique Flask route.
 
-The number of commits are inflated since the Git has to be updated for every minor change made due to the program being run on the cloud.
+The number of commits are vastly inflated. The Git has to be updated for every minor change made due to the program being run on the cloud.
