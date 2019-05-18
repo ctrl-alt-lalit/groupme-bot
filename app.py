@@ -32,14 +32,32 @@ class GMBot:  # parent class for all GroupMe bots
 # child classes
 class LFBot(GMBot):
     def chat(self, data):
-        if ("@" + self.name in data["text"]) and (data["name"] != self.name):
+        if data["name"] != self.name:
+            if "@" + self.name in data["text"]:
+                self.commands(data)
+            if data["name"] == "GroupMe":
+                self.group_events(data)
+
+    def commands(self, data):
+        if "echo" in data["text"]:
             msg = 'hi @{}, you said "{}"'.format(data["name"], data["text"])
+        elif "faq" in data["text"]:
+            msg = "Howdy! In order to keep the group from getting cluttered, we made a FAQ for y'all. Please read this first, but feel free to ask us additional questions/clarification. The FAQ is at the bottom is this document: {}\nbeep boop :)".format(os.getenv("FAQ_URL"))
+        else:
+            msg = "Sorry, I don't recognize that command.\nbeep boop :("
+
+        self.send_message(msg)
+
+    def group_events(self, data):
+        if "renamed" in data["text"]:
+            new_name = data['text'][data["text"].find("to")+3:]
+            msg = "nice name @{}".format(new_name)
             self.send_message(msg)
 
 
 # test bots
 test_bot = LFBot(os.getenv("TEST_BOT_ID"), os.getenv("TEST_BOT_NAME"))
-@app.route('/lf', methods=["POST"])
+@app.route('/test', methods=["POST"])
 def read_lf_group():
     data = request.get_json()
     test_bot.chat(data)
@@ -47,7 +65,7 @@ def read_lf_group():
 
 
 concurrent_bot = LFBot(os.getenv("BC_BOT_ID"), os.getenv("BC_BOT_NAME"))  # testing multiple bots at once, it works!
-@app.route('/lf2', methods=["POST"])
+@app.route('/test2', methods=["POST"])
 def read_lf_group2():
     data = request.get_json()
     concurrent_bot.chat(data)
