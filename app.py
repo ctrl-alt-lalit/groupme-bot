@@ -39,7 +39,9 @@ class LFBot(GMBot):
                 self.group_events(data)
 
     def commands(self, data):
-        if "echo" in data["text"]:
+        if "help" in data["text"]:
+            msg = "@{}, I know the following commands: echo, faq".format(data["name"])
+        elif "echo" in data["text"]:
             msg = 'hi @{}, you said "{}"'.format(data["name"], data["text"])
         elif "faq" in data["text"]:
             msg = "Howdy! In order to keep the group from getting cluttered, we made a FAQ for y'all. Please read this first, but feel free to ask us additional questions/clarification. The FAQ is at the bottom is this document: {}\nbeep boop :)".format(os.getenv("FAQ_URL"))
@@ -53,12 +55,16 @@ class LFBot(GMBot):
             new_name = data['text'][data["text"].find("to")+3:]
             msg = "nice name @{}".format(new_name)
             self.send_message(msg)
+        elif "has joined" in data["text"]:
+            new_user = data["text"][0: data["text"].find("has joined")-1]
+            msg = "Howdy! @{}".format(new_user)
+            self.send_message(msg)
 
 
 # test bots
 test_bot = LFBot(os.getenv("TEST_BOT_ID"), os.getenv("TEST_BOT_NAME"))
 @app.route('/test', methods=["POST"])
-def read_lf_group():
+def read_test_group():
     data = request.get_json()
     test_bot.chat(data)
     return "done", 200
@@ -66,7 +72,7 @@ def read_lf_group():
 
 concurrent_bot = LFBot(os.getenv("BC_BOT_ID"), os.getenv("BC_BOT_NAME"))  # testing multiple bots at once, it works!
 @app.route('/test2', methods=["POST"])
-def read_lf_group2():
+def read_test_group2():
     data = request.get_json()
     concurrent_bot.chat(data)
     return "done", 200
