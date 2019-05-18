@@ -50,14 +50,24 @@ class LFBot(GMBot):
 
         self.send_message(msg)
 
-    def group_events(self, data):
-        if "renamed" in data["text"]:
+    def group_events(self, data):  # someone changes their nickname
+        if "renamed" in data["text"] or "changed name" in data["text"]:
             new_name = data['text'][data["text"].find("to")+3:]
-            msg = "nice name @{}".format(new_name)
+            msg = "nice name! @{}".format(new_name)
             self.send_message(msg)
-        elif "has joined" in data["text"]:
+        elif "has joined" in data["text"]:  # one person joins the group
             new_user = data["text"][0: data["text"].find("has joined")-1]
             msg = "Howdy! @{}".format(new_user)
+            self.send_message(msg)
+        elif "added" in data["text"]:  # support adding multiple users at once
+            new_users = data["text"][data["text"].find("added")+6: data["text"].find("to")-1]
+            new_users = new_users.split(", ")
+            last_users = new_users[-1].split(" and ")
+            new_users[-1] = last_users[0]
+            new_users += [last_users[1]]
+            msg = "Howdy! "
+            for user in new_users:
+                msg += "@{} ".format(user)
             self.send_message(msg)
 
 
