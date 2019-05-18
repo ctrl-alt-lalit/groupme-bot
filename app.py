@@ -43,6 +43,8 @@ class LFBot(GMBot):
     def commands(self, data):  # someone @s the bot
         if "help" in data["text"]:
             msg = "@{}, I know the following commands: echo, faq".format(data["name"])
+        elif "howdy" in str.lower(data["text"]):
+            msg = "@{} HOWDY!".format(data["name"])
         elif "echo" in data["text"]:
             msg = 'hi @{}, you said "{}"'.format(data["name"], data["text"])
         elif "faq" in data["text"]:
@@ -59,7 +61,7 @@ class LFBot(GMBot):
             self.send_message(msg)
         elif "has joined" in data["text"]:  # one person joins the group
             new_user = data["text"][0: data["text"].find("has joined")-1]
-            msg = "Howdy! @{}".format(new_user)
+            msg = "Howdy! @{} Tell us your major (you can put it in your nickname) and check out this doc! {} \nThanks and Gig 'Em".format(new_user, os.getenv("FAQ_URL"))
             self.send_message(msg)
         elif "added" in data["text"]:  # one or more people get added to group
             new_users = data["text"][data["text"].find("added")+6: data["text"].find("to")-1]
@@ -71,11 +73,11 @@ class LFBot(GMBot):
             msg = "Howdy! "
             for user in new_users:
                 msg += "@{} ".format(user)
+            msg += "Tell us your major (you can put it in your nickname) and check out this doc! {}\nThanks and Gig 'Em!".format(os.getenv("FAQ_URL"))
             self.send_message(msg)
 
 
-
-# test bots
+# test bot
 test_bot = LFBot(os.getenv("TEST_BOT_ID"), os.getenv("TEST_BOT_NAME"))
 @app.route('/test', methods=["POST"])
 def read_test_group():
@@ -84,9 +86,10 @@ def read_test_group():
     return "done", 200
 
 
-concurrent_bot = LFBot(os.getenv("BC_BOT_ID"), os.getenv("BC_BOT_NAME"))  # testing multiple bots at once, it works!
-@app.route('/test2', methods=["POST"])
+# actual bots
+lf_bot = LFBot(os.getenv("LF_BOT_ID"), os.getenv("LF_BOT_NAME"))  # testing multiple bots at once, it works!
+@app.route('/lf', methods=["POST"])
 def read_test_group2():
     data = request.get_json()
-    concurrent_bot.chat(data)
+    lf_bot.chat(data)
     return "done", 200

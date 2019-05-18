@@ -1,7 +1,7 @@
 ## This program runs chatbots in Groupme. I started this project to learn the GroupMe API, how to use Heroku, and introduce myself to Git.
 
 Each bot can do different things, including:
- - echoing back what someone says
+ - echoing what someone says
  - introducing itself when someone enters a groupchat
  - periodically linking a FAQ
 
