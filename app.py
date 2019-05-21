@@ -3,11 +3,12 @@ import json
 import requests
 from flask import Flask, request
 from time import sleep
+from abc import ABC
 
 app = Flask(__name__)
 
 
-class GMBot:  # parent class for all GroupMe bots. All bot data and functions that interact with the API go here
+class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and functions that interact with API go here
     def __init__(self, bot_id, bot_name, group_id):
         self.id = bot_id
         self.name = bot_name
@@ -75,7 +76,8 @@ class GMBot:  # parent class for all GroupMe bots. All bot data and functions th
 
 # child classes
 class LFBot(GMBot):
-    greeting = "Howdy @{}, Welcome the {} GroupMe! Feel free to talk and ask us questions, but check out the sidebar first.\nThanks and Gig 'Em"
+    greeting = "Howdy @{}, Welcome the {} GroupMe! Feel free to talk and ask us questions, " \
+               "but check out the sidebar first.\nThanks and Gig 'Em"
 
     def chat(self, data):  # potentially respond to most recent message
         if data["name"] != self.name:
@@ -92,30 +94,28 @@ class LFBot(GMBot):
 
     def commands(self, data):  # someone prompts the bot
         if "help" in data["text"]:
-            msg = "@{}, I know the following commands: echo, faq, @everyone".format(data["name"])
+            msg = "@{}, I know the following commands: faq, @everyone".format(data["name"])
             self.send_message(msg, [self.create_mention(msg, data)])
+        elif "faq" in data["text"]:
+            msg = "Howdy! We made a FAQ for y'all. Please read this first," \
+                  " but feel free to ask us additional questions. {}".format(os.getenv("FAQ_URL"))
+            self.send_message(msg)
         elif "howdy" in str.lower(data["text"]):
             msg = "@{} HOWDY!".format(data["name"])
             self.send_message(msg, [self.create_mention(msg, data)])
-        elif "echo" in data["text"]:
-            msg = '@{}, you said "{}"'.format(data["name"], data["text"][data["text"].find("echo")+5:])
-            self.send_message(msg, [self.create_mention(msg, data)])
-        elif "faq" in data["text"]:
-            msg = "Howdy! We made a FAQ for y'all. Please read this first, but feel free to ask us additional questions. {}".format(os.getenv("FAQ_URL"))
-            self.send_message(msg)
-        elif "join" in data["text"]:
-            data["text"] = "{} has joined the group.".format(data["name"])
-            self.group_events(data)
         else:
             return
 
-    def group_events(self, data):  # messages from the GroupMe client
+    def group_events(self, data):  # parse messages from the GroupMe client
         if "has joined" in data["text"]:
             new_name = data["text"][0: data["text"].find("has joined")-1]
             msg = self.greeting.format(new_name, os.getenv("LF_GROUP_NAME"))
             new_user = self.get_user_dict([new_name])
-            mention = {"type": "mentions", "user_ids": [new_user[new_name]], "loci": [(msg.find("@"), len(new_name)+1)]}
-            self.send_message(msg, [mention])
+            if new_user == {}:
+                self.send_message(msg)
+            else:
+                mention = {"type": "mentions", "user_ids": [new_user[new_name]], "loci": [(msg.find("@"), len(new_name)+1)]}
+                self.send_message(msg, [mention])
         elif "added" in data["text"]:
             def list_added_users():  # create list of new user names from "added" message
                 new_usernames = data["text"][data["text"].find("added")+6: data["text"].find("to the group")-1]
@@ -144,7 +144,11 @@ def read_test_group():
 
 # actual bots
 lf_bot = LFBot(os.getenv("LF_BOT_ID"), os.getenv("LF_BOT_NAME"), os.getenv("LF_GROUP_ID"))
+<<<<<<< HEAD
 @app.route('/lf', methods=["POST"])
+=======
+@app.route("/lf", methods=["POST"])
+>>>>>>> 5961012... join failsafe
 def read_lf_group():
     data = request.get_json()
     lf_bot.chat(data)
