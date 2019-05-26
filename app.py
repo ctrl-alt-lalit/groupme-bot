@@ -76,7 +76,7 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
 
 # child classes
 class LFBot(GMBot):
-    greeting = "Howdy @{}, Welcome the {} GroupMe! Feel free to talk and ask us questions, " \
+    greeting = "Howdy @{}, Welcome to the {} GroupMe! Feel free to talk and ask us questions, " \
                "but check out the sidebar first.\nThanks and Gig 'Em"
 
     def chat(self, data):  # potentially respond to most recent message
@@ -94,11 +94,14 @@ class LFBot(GMBot):
 
     def commands(self, data):  # someone prompts the bot
         if "help" in data["text"]:
-            msg = "@{}, I know the following commands: faq, @everyone".format(data["name"])
+            msg = "@{}, I know the following commands: faq, movein, @everyone".format(data["name"])
             self.send_message(msg, [self.create_mention(msg, data)])
         elif "faq" in data["text"]:
             msg = "Howdy! We made a FAQ for y'all. Please read this first," \
                   " but feel free to ask us additional questions. {}".format(os.getenv("FAQ_URL"))
+            self.send_message(msg)
+        elif "movein" in data["text"]:
+            msg = "Howdy! This web page will answer most of your move in questions. {}".format(os.getenv("MOVEIN_URL"))
             self.send_message(msg)
         elif "howdy" in str.lower(data["text"]):
             msg = "@{} HOWDY!".format(data["name"])
@@ -126,12 +129,16 @@ class LFBot(GMBot):
                     new_usernames += [last_users[1]]
                 return new_usernames
 
-            new_users = self.get_user_dict(list_added_users())
-            for user, user_id in new_users.items():
+            new_names = list_added_users()
+            new_users = self.get_user_dict(new_names)
+            for user, user_id in new_users.items():  # @ users who can be mentioned
                 msg = self.greeting.format(user, os.getenv("LF_GROUP_NAME"))
                 mention = {"type": "mentions", "user_ids": [user_id], "loci": [(msg.find("@"), len(user) + 1)]}
                 self.send_message(msg, [mention])
-
+                new_names.remove(user)
+            for name in new_names:  # plain text for those who can't
+                msg = self.greeting.format(name, os.getenv("LF_GROUP_NAME"))
+                self.send_message(msg)
 
 # test bot
 test_bot = LFBot(os.getenv("TEST_BOT_ID"), os.getenv("TEST_BOT_NAME"), os.getenv("TEST_GROUP_ID"))
