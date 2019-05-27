@@ -103,11 +103,12 @@ class LFBot(GMBot):
         elif "movein" in data["text"]:
             msg = "Howdy! This web page will answer most of your move in questions. {}".format(os.getenv("MOVEIN_URL"))
             self.send_message(msg)
+        elif "ras" in str.lower(data["text"]):
+            msg = os.getenv("RA_STR")
+            self.send_message(msg)
         elif "howdy" in str.lower(data["text"]):
             msg = "@{} HOWDY!".format(data["name"])
             self.send_message(msg, [self.create_mention(msg, data)])
-        else:
-            return
 
     def group_events(self, data):  # parse messages from the GroupMe client
         if "has joined" in data["text"]:
@@ -146,16 +147,12 @@ test_bot = LFBot(os.getenv("TEST_BOT_ID"), os.getenv("TEST_BOT_NAME"), os.getenv
 def read_test_group():
     data = request.get_json()
     test_bot.chat(data)
-    return "ok", 200  # 200 is the ok code for the GroupMe API
+    return "ok", 200
 
 
 # actual bots
 lf_bot = LFBot(os.getenv("LF_BOT_ID"), os.getenv("LF_BOT_NAME"), os.getenv("LF_GROUP_ID"))
-<<<<<<< HEAD
-@app.route('/lf', methods=["POST"])
-=======
 @app.route("/lf", methods=["POST"])
->>>>>>> 5961012... join failsafe
 def read_lf_group():
     data = request.get_json()
     lf_bot.chat(data)

@@ -7,5 +7,3 @@ Each bot can do different things, including:
  - mention all the members of a group
 
 This program runs multiple bots concurrently. Each bot is its own object with a unique Flask route.
-
-The number of commits are vastly inflated. The Git has to be updated for every minor change made due to the program being run on the cloud.
