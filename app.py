@@ -23,11 +23,6 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
         }
         requests.post(post_url, data=json.dumps(packet))
 
-    def chat(self, data):  # meant to be overwritten by children
-        if ("@" + self.name in data["text"]) and (data["name"] != self.name):
-            msg = "hi @{}, my creator forgot to teach me how to talk.".format(data["name"])
-            self.send_message(msg)
-
     @staticmethod
     def create_mention(msg, data):  # create a simple, 1-person mention attachment
         mention = {
@@ -46,22 +41,19 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
         members_json = response.json()["response"]["members"]
         return members_json
 
-    def at_everyone(self):  # mention every member of the GroupMe
-        def create_everyone_mention(members_json):  # create mention attachment with every member's id
-            user_ids = []
-            loci = []
-            for member in members_json:
-                user_ids += [member["user_id"]]
-                loci += [(0, 8)]
-            mention = {
-                "type": "mentions",
-                "user_ids": user_ids,
-                "loci": loci
-            }
-            return mention
+    @staticmethod
+    def create_multi_mention(members_json):  # create mention attachment with every member's id
+        user_ids = []
+        loci = []
+        for member in members_json:
+            user_ids += [member["user_id"]]
+            loci += [(0, 8)]
+        mention = {"type": "mentions", "user_ids": user_ids, "loci": loci}
+        return mention
 
+    def at_everyone(self):  # mention every member of the GroupMe
         member_json = self.get_member_json()
-        mentions = create_everyone_mention(member_json)
+        mentions = self.create_multi_mention(member_json)
         msg = "Everyone read the GroupMe!"
         self.send_message(msg, [mentions])
 
@@ -69,8 +61,8 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
         members_json = self.get_member_json()
         user_dict = {}
         for member in members_json:
-            if member.get("nickname") in names:
-                user_dict[member.get("nickname")] = member.get("user_id")
+            if member["nickname"] in names:
+                user_dict[member["nickname"]] = member["user_id"]
         return user_dict
 
 
@@ -85,16 +77,19 @@ class LFBot(GMBot):
                 self.commands(data)
             elif data["name"] == "GroupMe":
                 self.group_events(data)
+            elif "@everyone" in data["text"]:
+                self.at_everyone()
+            elif "@fish" in data["text"]:
+                self.at_freshmen()
             elif "best house" in data["text"]:
                 self.send_message("The mitochondria is the powerhouse of the cell")
                 sleep(0.1)
                 self.send_message("and the powerhouse of honors is House Finnell!")
-            elif "@everyone" in data["text"]:
-                self.at_everyone()
 
-    def commands(self, data):  # someone prompts the bot
+    def commands(self, data):  # someone directly prompts the bot
         if "help" in data["text"]:
-            msg = "@{}, I know the following commands: faq, movein, @everyone".format(data["name"])
+            msg = "@{}, I know the following commands: faq, movein, RAs, launch," \
+                  " code, @fish, @everyone".format(data["name"])
             self.send_message(msg, [self.create_mention(msg, data)])
         elif "faq" in data["text"]:
             msg = "Howdy! We made a FAQ for y'all. Please read this first," \
@@ -103,12 +98,16 @@ class LFBot(GMBot):
         elif "movein" in data["text"]:
             msg = "Howdy! This web page will answer most of your move in questions. {}".format(os.getenv("MOVEIN_URL"))
             self.send_message(msg)
+        elif "launch" in data["text"]:
+            msg = "Check out the LAUNCH website for more info about Honors. {}".format(os.getenv("LAUNCH_URL"))
+            self.send_message(msg)
+        elif "code" in data["text"]:
+            msg = "@{} my github repository (source code) can be found at " \
+                  "https://github.com/lbauskar/GroupmeDormBot".format(data["name"])
+            self.send_message(msg, [self.create_mention(msg, data)])
         elif "ras" in str.lower(data["text"]):
             msg = os.getenv("RA_STR")
             self.send_message(msg)
-        elif "howdy" in str.lower(data["text"]):
-            msg = "@{} HOWDY!".format(data["name"])
-            self.send_message(msg, [self.create_mention(msg, data)])
 
     def group_events(self, data):  # parse messages from the GroupMe client
         if "has joined" in data["text"]:
@@ -137,23 +136,35 @@ class LFBot(GMBot):
                 mention = {"type": "mentions", "user_ids": [user_id], "loci": [(msg.find("@"), len(user) + 1)]}
                 self.send_message(msg, [mention])
                 new_names.remove(user)
-            for name in new_names:  # plain text for those who can't
+            for name in new_names:  # plain text for those who can't be mentioned
                 msg = self.greeting.format(name, os.getenv("LF_GROUP_NAME"))
                 self.send_message(msg)
 
-# test bot
+    def at_freshmen(self):  # mention all the freshmen only
+        member_json = self.get_member_json()
+        for member in member_json:
+            if "SA" in member["nickname"] or "RA" in member["nickname"] or "JA" in member["nickname"]:
+                member_json.remove(member)
+        msg = "Freshmen, read the GroupMe pls"
+        if member_json:
+            fish_mention = self.create_multi_mention(member_json)
+            self.send_message(msg, [fish_mention])
+        else:
+            self.send_message(msg)
+
+
+# BOTS
 test_bot = LFBot(os.getenv("TEST_BOT_ID"), os.getenv("TEST_BOT_NAME"), os.getenv("TEST_GROUP_ID"))
-@app.route('/test', methods=["POST"])
+@app.route("/test", methods=["POST"])
 def read_test_group():
     data = request.get_json()
     test_bot.chat(data)
-    return "ok", 200
+    return "OK", 200
 
 
-# actual bots
 lf_bot = LFBot(os.getenv("LF_BOT_ID"), os.getenv("LF_BOT_NAME"), os.getenv("LF_GROUP_ID"))
 @app.route("/lf", methods=["POST"])
 def read_lf_group():
     data = request.get_json()
     lf_bot.chat(data)
-    return "ok", 200
+    return "OK", 200
