@@ -33,29 +33,31 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
         return mention
 
     def get_member_json(self):  # get json of all members from GroupMe API
-        member_url = "https://api.groupme.com/v3/groups/" + str(self.group)
-        token = {
-            "token": os.getenv("TOKEN")
-        }
-        response = requests.get(member_url, params=token)
+        group_url = "https://api.groupme.com/v3/groups/" + str(self.group)
+        token = {"token": os.getenv("TOKEN")}
+        response = requests.get(group_url, params=token)
         members_json = response.json()["response"]["members"]
         return members_json
 
     @staticmethod
     def create_multi_mention(members_json):  # create mention attachment with every member's id
-        user_ids = []
-        loci = []
-        for member in members_json:
-            user_ids += [member["user_id"]]
-            loci += [(0, 8)]
-        mention = {"type": "mentions", "user_ids": user_ids, "loci": loci}
-        return mention
+        loci = [(0, 8)] * 20
+        user_ids = [member["user_id"] for member in members_json]
+        mention_list = []
+        MAX_MENTIONS_PER_MESSAGE = 49
+        while len(user_ids) > MAX_MENTIONS_PER_MESSAGE:
+            mention_list += [{"type": "mentions", "user_ids": user_ids[:MAX_MENTIONS_PER_MESSAGE], "loci": loci}]
+            del user_ids[:MAX_MENTIONS_PER_MESSAGE]
+        if len(user_ids) > 0:
+            mention_list += [{"type": "mentions", "user_ids": user_ids, "loci": loci[:len(user_ids)]}]
+        return mention_list
 
     def at_everyone(self):  # mention every member of the GroupMe
         member_json = self.get_member_json()
         mentions = self.create_multi_mention(member_json)
-        msg = "Everyone read the GroupMe!"
-        self.send_message(msg, [mentions])
+        for mention in mentions:
+            msg = "Everyone read the GroupMe!"
+            self.send_message(msg, [mention])
 
     def get_user_dict(self, names=()):  # returns dictionary with format {"name" : "user_id"} for given names
         members_json = self.get_member_json()
@@ -108,6 +110,13 @@ class LFBot(GMBot):
         elif "ras" in str.lower(data["text"]):
             msg = os.getenv("RA_STR")
             self.send_message(msg)
+        elif "test" in data["text"] and self.group == os.getenv("TEST_GROUP_ID"):
+            self.test()
+
+    def test(self):
+        self.group = os.getenv("LF_GROUP_ID")
+        self.at_everyone()
+        self.group = os.getenv("TEST_GROUP_ID")
 
     def group_events(self, data):  # parse messages from the GroupMe client
         if "has joined" in data["text"]:
@@ -147,8 +156,9 @@ class LFBot(GMBot):
                 member_json.remove(member)
         msg = "Freshmen, read the GroupMe pls"
         if member_json:
-            fish_mention = self.create_multi_mention(member_json)
-            self.send_message(msg, [fish_mention])
+            fish_mentions = self.create_multi_mention(member_json)
+            for fish_mention in fish_mentions:
+                self.send_message(msg, [fish_mention])
         else:
             self.send_message(msg)
 
