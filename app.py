@@ -12,7 +12,7 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
     def __init__(self, bot_id, bot_name, group_id):
         self.id = bot_id
         self.name = bot_name
-        self.group = group_id
+        self.group = str(group_id)
 
     def send_message(self, msg, attachments=()):  # post a message on GroupMe
         post_url = "https://api.groupme.com/v3/bots/post"
@@ -32,37 +32,37 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
         }
         return mention
 
-    def get_member_json(self):  # get json of all members from GroupMe API
-        group_url = "https://api.groupme.com/v3/groups/" + str(self.group)
+    def get_member_list(self):  # get list of all members of a group from GroupMe API
+        group_url = "https://api.groupme.com/v3/groups/" + self.group
         token = {"token": os.getenv("TOKEN")}
         response = requests.get(group_url, params=token)
         members_json = response.json()["response"]["members"]
         return members_json
 
     @staticmethod
-    def create_multi_mention(members_json):  # create mention attachment with every member's id
-        loci = [(0, 8)] * 20
-        user_ids = [member["user_id"] for member in members_json]
+    def create_multi_mention(members_list):  # create mention attachment with multiple members' ids
+        max_mentions_per_msg = 47  # undocumented value determined by GroupMe API, # of users you can mention at once
+        loci = [(0, 8)] * max_mentions_per_msg
+        user_ids = [member["user_id"] for member in members_list]
         mention_list = []
-        MAX_MENTIONS_PER_MESSAGE = 49
-        while len(user_ids) > MAX_MENTIONS_PER_MESSAGE:
-            mention_list += [{"type": "mentions", "user_ids": user_ids[:MAX_MENTIONS_PER_MESSAGE], "loci": loci}]
-            del user_ids[:MAX_MENTIONS_PER_MESSAGE]
-        if len(user_ids) > 0:
+        while len(user_ids) > max_mentions_per_msg:
+            mention_list += [{"type": "mentions", "user_ids": user_ids[:max_mentions_per_msg], "loci": loci}]
+            del user_ids[:max_mentions_per_msg]
+        if user_ids:
             mention_list += [{"type": "mentions", "user_ids": user_ids, "loci": loci[:len(user_ids)]}]
         return mention_list
 
     def at_everyone(self):  # mention every member of the GroupMe
-        member_json = self.get_member_json()
-        mentions = self.create_multi_mention(member_json)
+        member_list = self.get_member_list()
+        mentions = self.create_multi_mention(member_list)
         for mention in mentions:
             msg = "Everyone read the GroupMe!"
             self.send_message(msg, [mention])
 
     def get_user_dict(self, names=()):  # returns dictionary with format {"name" : "user_id"} for given names
-        members_json = self.get_member_json()
+        members_list = self.get_member_list()
         user_dict = {}
-        for member in members_json:
+        for member in members_list:
             if member["nickname"] in names:
                 user_dict[member["nickname"]] = member["user_id"]
         return user_dict
@@ -70,18 +70,15 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
 
 # child classes
 class LFBot(GMBot):
-    greeting = "Howdy @{}, Welcome to the {} GroupMe! Feel free to talk and ask us questions, " \
-               "but check out the sidebar first.\nThanks and Gig 'Em"
-
     def chat(self, data):  # potentially respond to most recent message
         if data["name"] != self.name:
-            if "@" + self.name in data["text"] or data["text"][0] == "!":
+            if data["text"][0] == "!" or "@" + self.name in data["text"]:
                 self.commands(data)
             elif data["name"] == "GroupMe":
-                self.group_events(data)
-            elif "@everyone" in data["text"]:
+                self.groupme_events(data)
+            elif "@everyone" in data["text"] and self.check_privilege(data):
                 self.at_everyone()
-            elif "@fish" in data["text"]:
+            elif "@fish" in data["text"] and self.check_privilege(data):
                 self.at_freshmen()
             elif "best house" in data["text"]:
                 self.send_message("The mitochondria is the powerhouse of the cell")
@@ -89,45 +86,40 @@ class LFBot(GMBot):
                 self.send_message("and the powerhouse of honors is House Finnell!")
 
     def commands(self, data):  # someone directly prompts the bot
-        if "help" in data["text"]:
-            msg = "@{}, I know the following commands: faq, movein, RAs, launch," \
-                  " code, @fish, @everyone".format(data["name"])
+        chat_input = str.lower(data["text"])
+        if "help" in chat_input:
+            msg = "@{}, I know the following commands: !faq, !movein, !RAs, !launch," \
+                  " !code, @fish, @everyone".format(data["name"])
             self.send_message(msg, [self.create_mention(msg, data)])
-        elif "faq" in data["text"]:
-            msg = "Howdy! We made a FAQ for y'all. Please read this first," \
-                  " but feel free to ask us additional questions. {}".format(os.getenv("FAQ_URL"))
+        elif "faq" in chat_input:
+            msg = os.getenv("FAQ_URL")
             self.send_message(msg)
-        elif "movein" in data["text"]:
-            msg = "Howdy! This web page will answer most of your move in questions. {}".format(os.getenv("MOVEIN_URL"))
+        elif "movein" in chat_input:
+            msg = os.getenv("MOVEIN_URL")
             self.send_message(msg)
-        elif "launch" in data["text"]:
-            msg = "Check out the LAUNCH website for more info about Honors. {}".format(os.getenv("LAUNCH_URL"))
+        elif "launch" in chat_input:
+            msg = os.getenv("LAUNCH_URL")
             self.send_message(msg)
-        elif "code" in data["text"]:
+        elif "code" in chat_input:
             msg = "@{} my github repository (source code) can be found at " \
                   "https://github.com/lbauskar/GroupmeDormBot".format(data["name"])
             self.send_message(msg, [self.create_mention(msg, data)])
-        elif "ras" in str.lower(data["text"]):
+        elif "ras" in chat_input:
             msg = os.getenv("RA_STR")
             self.send_message(msg)
-        elif "test" in data["text"] and self.group == os.getenv("TEST_GROUP_ID"):
-            self.test()
 
-    def test(self):
-        self.group = os.getenv("LF_GROUP_ID")
-        self.at_everyone()
-        self.group = os.getenv("TEST_GROUP_ID")
-
-    def group_events(self, data):  # parse messages from the GroupMe client
+    def groupme_events(self, data):  # parse messages from the GroupMe client
+        greeting = os.getenv("LF_GROUP_NAME")
         if "has joined" in data["text"]:
             new_name = data["text"][0: data["text"].find("has joined")-1]
-            msg = self.greeting.format(new_name, os.getenv("LF_GROUP_NAME"))
+            msg = greeting.format(new_name, os.getenv("LF_GROUP_NAME"))
             new_user = self.get_user_dict([new_name])
-            if new_user == {}:
-                self.send_message(msg)
-            else:
-                mention = {"type": "mentions", "user_ids": [new_user[new_name]], "loci": [(msg.find("@"), len(new_name)+1)]}
+            if new_user:
+                mention = {"type": "mentions", "user_ids": [new_user[new_name]],
+                           "loci": [(msg.find("@"), len(new_name) + 1)]}
                 self.send_message(msg, [mention])
+            else:
+                self.send_message(msg)
         elif "added" in data["text"]:
             def list_added_users():  # create list of new user names from "added" message
                 new_usernames = data["text"][data["text"].find("added")+6: data["text"].find("to the group")-1]
@@ -141,26 +133,35 @@ class LFBot(GMBot):
             new_names = list_added_users()
             new_users = self.get_user_dict(new_names)
             for user, user_id in new_users.items():  # @ users who can be mentioned
-                msg = self.greeting.format(user, os.getenv("LF_GROUP_NAME"))
+                msg = greeting.format(user, os.getenv("LF_GROUP_NAME"))
                 mention = {"type": "mentions", "user_ids": [user_id], "loci": [(msg.find("@"), len(user) + 1)]}
                 self.send_message(msg, [mention])
                 new_names.remove(user)
             for name in new_names:  # plain text for those who can't be mentioned
-                msg = self.greeting.format(name, os.getenv("LF_GROUP_NAME"))
+                msg = greeting.format(name)
                 self.send_message(msg)
 
     def at_freshmen(self):  # mention all the freshmen only
-        member_json = self.get_member_json()
-        for member in member_json:
+        member_list = self.get_member_list()
+        for member in member_list:
             if "SA" in member["nickname"] or "RA" in member["nickname"] or "JA" in member["nickname"]:
-                member_json.remove(member)
+                member_list.remove(member)
         msg = "Freshmen, read the GroupMe pls"
-        if member_json:
-            fish_mentions = self.create_multi_mention(member_json)
+        if member_list:
+            fish_mentions = self.create_multi_mention(member_list)
             for fish_mention in fish_mentions:
                 self.send_message(msg, [fish_mention])
         else:
             self.send_message(msg)
+
+    def check_privilege(self, data):  # see if user is authorized to issue command
+        name = data["name"]
+        if "SA" in name or "JA" in name or "RA" in name:
+            return True
+        else:
+            msg = "I'm sorry @{}, I'm afraid I can't do that".format(name)
+            self.send_message(msg, [self.create_mention(msg, data)])
+            return False
 
 
 # BOTS
