@@ -2,8 +2,9 @@ import os
 import json
 import requests
 from flask import Flask, request
-from time import sleep
 from abc import ABC
+from time import sleep
+from random import randrange
 
 app = Flask(__name__)
 
@@ -15,6 +16,7 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
         self.group = str(group_id)
 
     def send_message(self, msg, attachments=()):  # post a message on GroupMe
+        sleep(0.1)
         post_url = "https://api.groupme.com/v3/bots/post"
         packet = {
             "bot_id": self.id,
@@ -81,9 +83,7 @@ class LFBot(GMBot):
             elif "@fish" in data["text"] and self.check_privilege(data):
                 self.at_freshmen()
             elif "best house" in data["text"]:
-                self.send_message("The mitochondria is the powerhouse of the cell")
-                sleep(0.1)
-                self.send_message("and the powerhouse of honors is House Finnell!")
+                self.cheerlead_finnell()
 
     def commands(self, data):  # someone directly prompts the bot
         chat_input = str.lower(data["text"])
@@ -162,6 +162,16 @@ class LFBot(GMBot):
             msg = "I'm sorry @{}, I'm afraid I can't do that".format(name)
             self.send_message(msg, [self.create_mention(msg, data)])
             return False
+
+    def cheerlead_finnell(self):
+        rng = randrange(3)
+        if rng == 0:
+            self.send_message("The mitochondria is the powerhouse of the cell,"
+                              " and the powerhouse of Honors is House Finnell!")
+        elif rng == 1:
+            self.send_message("The best ice cream from Texas is Blue Bell. The greatest house in Honors is Finnell.")
+        elif rng == 2:
+            self.send_message("If you ain't getting Finnell, you're getting finessed.")
 
 
 # BOTS
