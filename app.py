@@ -6,6 +6,7 @@ from abc import ABC
 from time import sleep
 from random import randrange
 
+
 app = Flask(__name__)
 
 
@@ -42,10 +43,10 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
         return members_json
 
     @staticmethod
-    def create_multi_mention(members_list):  # create mention attachment with multiple members' ids
+    def create_multi_mention(member_list):  # create mention attachment with multiple members' ids
         max_mentions_per_msg = 47  # undocumented value determined by GroupMe API, # of users you can mention at once
         loci = [(0, 8)] * max_mentions_per_msg
-        user_ids = [member["user_id"] for member in members_list]
+        user_ids = [member["user_id"] for member in member_list]
         mention_list = []
         while len(user_ids) > max_mentions_per_msg:
             mention_list += [{"type": "mentions", "user_ids": user_ids[:max_mentions_per_msg], "loci": loci}]
@@ -54,7 +55,7 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
             mention_list += [{"type": "mentions", "user_ids": user_ids, "loci": loci[:len(user_ids)]}]
         return mention_list
 
-    def at_everyone(self):  # mention every member of the GroupMe
+    def at_everyone(self):  # mention every member of a group
         member_list = self.get_member_list()
         mentions = self.create_multi_mention(member_list)
         for mention in mentions:
@@ -82,7 +83,7 @@ class LFBot(GMBot):
                 self.at_everyone()
             elif "@fish" in data["text"] and self.check_privilege(data):
                 self.at_freshmen()
-            elif "best house" in data["text"]:
+            elif "best house" in str.lower(data["text"]):
                 self.cheerlead_finnell()
 
     def commands(self, data):  # someone directly prompts the bot
@@ -164,7 +165,7 @@ class LFBot(GMBot):
             return False
 
     def cheerlead_finnell(self):
-        rng = randrange(3)
+        rng = randrange(4)
         if rng == 0:
             self.send_message("The mitochondria is the powerhouse of the cell,"
                               " and the powerhouse of Honors is House Finnell!")
@@ -172,6 +173,18 @@ class LFBot(GMBot):
             self.send_message("The best ice cream from Texas is Blue Bell. The greatest house in Honors is Finnell.")
         elif rng == 2:
             self.send_message("If you ain't getting Finnell, you're getting finessed.")
+        elif rng == 3:
+            self.send_message("The only thing mightier than the Heldenfelds stairwell"
+                              " is the power and pride of House Finnell!")
+
+
+class SABot(GMBot):
+    def chat(self, data):
+        if data["name"] != self.name and data["name"] != "GroupMe":
+            if "@everyone" in data["text"]:
+                self.at_everyone()
+            if "!!!test" in data["text"]:
+                self.send_message("I'm working")
 
 
 # BOTS
@@ -188,4 +201,12 @@ lf_bot = LFBot(os.getenv("LF_BOT_ID"), os.getenv("LF_BOT_NAME"), os.getenv("LF_G
 def read_lf_group():
     data = request.get_json()
     lf_bot.chat(data)
+    return "OK", 200
+
+
+sa_bot = SABot(os.getenv("SA_BOT_ID"), os.getenv("SA_BOT_NAME"), os.getenv("SA_GROUP_ID"))
+@app.route("/sa", methods=["POST"])
+def read_sa_group():
+    data = request.get_json()
+    sa_bot.chat(data)
     return "OK", 200
