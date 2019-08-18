@@ -90,7 +90,7 @@ class LFBot(GMBot):
         chat_input = str.lower(data["text"])
         if "help" in chat_input:
             msg = "@{}, I know the following commands: !faq, !movein, !RAs, !launch," \
-                  " !code, @fish, @everyone".format(data["name"])
+                  " !code, !howdy, @everyone".format(data["name"])
             self.send_message(msg, [self.create_mention(msg, data)])
         elif "faq" in chat_input:
             msg = os.getenv("FAQ_URL")
@@ -101,6 +101,13 @@ class LFBot(GMBot):
         elif "launch" in chat_input:
             msg = os.getenv("LAUNCH_URL")
             self.send_message(msg)
+        elif "howdy" in chat_input:
+            msg = "Howdy Week Schedule:"
+            img_attachment = {
+                "type": "image",
+                "url": "https://i.groupme.com/844x1500.jpeg.4bf577afcfc2404eb55e1c7bcaa1e7c3"
+            }
+            self.send_message(msg, [img_attachment])
         elif "code" in chat_input:
             msg = "@{} my github repository (source code) can be found at " \
                   "https://github.com/lbauskar/GroupmeDormBot".format(data["name"])
