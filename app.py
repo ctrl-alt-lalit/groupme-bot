@@ -70,50 +70,66 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
                 user_dict[member["nickname"]] = member["user_id"]
         return user_dict
 
+    def at_admin(self):
+        member_list = self.get_member_list()
+        admin_list = []
+        for member in member_list:
+            if "admin" in member["roles"]:
+                admin_list += [member]
+        mentions = self.create_multi_mention(admin_list)
+        for mention in mentions:
+            msg = "Yo Boss! pls read."
+            self.send_message(msg, [mention])
+
 
 # child classes
 class LFBot(GMBot):
     def chat(self, data):  # potentially respond to most recent message
         if data["name"] != self.name:
-            if data["text"][0] == "!" or "@" + self.name in data["text"]:
-                self.commands(data)
-            elif data["name"] == "GroupMe":
-                self.groupme_events(data)
+            self.commands(data)
+            if data["name"] == "GroupMe":
+                pass
+                # self.groupme_events(data)
             elif "@everyone" in data["text"] and self.check_privilege(data):
                 self.at_everyone()
-            elif "@fish" in data["text"] and self.check_privilege(data):
+            elif "@freshmen" in data["text"] and self.check_privilege(data):
                 self.at_freshmen()
-            elif "best house" in str.lower(data["text"]):
-                self.cheerlead_finnell()
 
     def commands(self, data):  # someone directly prompts the bot
         chat_input = str.lower(data["text"])
-        if "help" in chat_input:
+        if "!help" in chat_input:
             msg = "@{}, I know the following commands: !faq, !movein, !RAs, !launch," \
-                  " !code, !howdy, @everyone".format(data["name"])
+                  " !code, !howdy, @everyone, @freshmen".format(data["name"])
             self.send_message(msg, [self.create_mention(msg, data)])
-        elif "faq" in chat_input:
+        if "!faq" in chat_input:
             msg = os.getenv("FAQ_URL")
             self.send_message(msg)
-        elif "movein" in chat_input:
+        if "!movein" in chat_input:
             msg = os.getenv("MOVEIN_URL")
             self.send_message(msg)
-        elif "launch" in chat_input:
+        if "!launch" in chat_input:
             msg = os.getenv("LAUNCH_URL")
             self.send_message(msg)
-        elif "howdy" in chat_input:
+        if "!howdy" in chat_input:
             msg = "Howdy Week Schedule:"
             img_attachment = {
                 "type": "image",
                 "url": "https://i.groupme.com/844x1500.jpeg.4bf577afcfc2404eb55e1c7bcaa1e7c3"
             }
             self.send_message(msg, [img_attachment])
-        elif "code" in chat_input:
+        if "!code" in chat_input:
             msg = "@{} my github repository (source code) can be found at " \
                   "https://github.com/lbauskar/GroupmeDormBot".format(data["name"])
             self.send_message(msg, [self.create_mention(msg, data)])
-        elif "ras" in chat_input:
+        if "!ras" in chat_input:
             msg = os.getenv("RA_STR")
+            self.send_message(msg)
+        if "!core" in chat_input:
+            msg = "core.tamu.edu \nicd.tamu.edu"
+            self.send_message(msg)
+        if "!registration" in chat_input or "shut up" in chat_input:
+            msg = "Yes, more seats will open for your classes. No we don't know when. " \
+                  "Check your major's catalog for what classes to take."
             self.send_message(msg)
 
     def groupme_events(self, data):  # parse messages from the GroupMe client
@@ -125,7 +141,12 @@ class LFBot(GMBot):
             if new_user:
                 mention = {"type": "mentions", "user_ids": [new_user[new_name]],
                            "loci": [(msg.find("@"), len(new_name) + 1)]}
-                self.send_message(msg, [mention])
+                if "Meagan" in new_name:
+                    meg_msg = "Howdy @{}, please go to sleep."
+                    meg_msg.format(new_name)
+                    self.send_message(meg_msg, [mention])
+                else:
+                    self.send_message(msg, [mention])
             else:
                 self.send_message(msg)
         elif "added" in data["text"]:
@@ -190,8 +211,17 @@ class SABot(GMBot):
         if data["name"] != self.name and data["name"] != "GroupMe":
             if "@everyone" in data["text"]:
                 self.at_everyone()
+            if "@jas" in data["text"].lower():
+                self.at_admin()
+            if "!timesheet" in data["text"].lower():
+                msg = "Work Schedule:"
+                img_attachment = {
+                    "type": "image",
+                    "url": "https://i.groupme.com/720x960.jpeg.7fcab0c0b190458cbac663606ba8970b"
+                }
+                self.send_message(msg, [img_attachment])
             if "!!!test" in data["text"]:
-                self.send_message("I'm working")
+                pass
 
 
 # BOTS
