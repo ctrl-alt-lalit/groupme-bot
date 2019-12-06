@@ -43,9 +43,9 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
         return members_json
 
     @staticmethod
-    def create_multi_mention(member_list):  # create mention attachment with multiple members' ids
+    def create_multi_mention(member_list, locus):  # create mention attachment with multiple members' ids
         max_mentions_per_msg = 47  # undocumented value determined by GroupMe API, # of users you can mention at once
-        loci = [(0, 8)] * max_mentions_per_msg
+        loci = [locus] * max_mentions_per_msg
         user_ids = [member["user_id"] for member in member_list]
         mention_list = []
         while len(user_ids) > max_mentions_per_msg:
@@ -57,7 +57,7 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
 
     def at_everyone(self):  # mention every member of a group
         member_list = self.get_member_list()
-        mentions = self.create_multi_mention(member_list)
+        mentions = self.create_multi_mention(member_list, (0, 8))
         for mention in mentions:
             msg = "Everyone read the GroupMe!"
             self.send_message(msg, [mention])
@@ -70,13 +70,13 @@ class GMBot(ABC):  # parent class for all GroupMe bots. Necessary bot data and f
                 user_dict[member["nickname"]] = member["user_id"]
         return user_dict
 
-    def at_admin(self):
+    def at_admin(self):  # mention all administrators of a chat
         member_list = self.get_member_list()
         admin_list = []
         for member in member_list:
             if "admin" in member["roles"]:
                 admin_list += [member]
-        mentions = self.create_multi_mention(admin_list)
+        mentions = self.create_multi_mention(admin_list, (0, 8))
         for mention in mentions:
             msg = "Yo Boss! pls read."
             self.send_message(msg, [mention])
@@ -131,6 +131,10 @@ class LFBot(GMBot):
             msg = "Yes, more seats will open for your classes. No we don't know when. " \
                   "Check your major's catalog for what classes to take."
             self.send_message(msg)
+        if "!google " in chat_input:
+            self.use_google(chat_input, "!google ")
+        elif "!g " in chat_input:
+            self.use_google(chat_input, "!g ")
 
     def groupme_events(self, data):  # parse messages from the GroupMe client
         greeting = os.getenv("LF_GROUP_NAME")
@@ -141,12 +145,7 @@ class LFBot(GMBot):
             if new_user:
                 mention = {"type": "mentions", "user_ids": [new_user[new_name]],
                            "loci": [(msg.find("@"), len(new_name) + 1)]}
-                if "Meagan" in new_name:
-                    meg_msg = "Howdy @{}, please go to sleep."
-                    meg_msg.format(new_name)
-                    self.send_message(meg_msg, [mention])
-                else:
-                    self.send_message(msg, [mention])
+                self.send_message(msg, [mention])
             else:
                 self.send_message(msg)
         elif "added" in data["text"]:
@@ -177,7 +176,7 @@ class LFBot(GMBot):
                 member_list.remove(member)
         msg = "Freshmen, read the GroupMe pls"
         if member_list:
-            fish_mentions = self.create_multi_mention(member_list)
+            fish_mentions = self.create_multi_mention(member_list, (0, 8))
             for fish_mention in fish_mentions:
                 self.send_message(msg, [fish_mention])
         else:
@@ -205,23 +204,62 @@ class LFBot(GMBot):
             self.send_message("The only thing mightier than the Heldenfelds stairwell"
                               " is the power and pride of House Finnell!")
 
+    def use_google(self, text, command):
+        search_terms = text[text.find(command) + len(command):].split()
+        if search_terms:
+            url = "http://letmegooglethat.com/?q="
+            for term in search_terms:
+                url += term + "+"
+            url = url[:-1]
+            self.send_message("use Google\n"+url)
+
 
 class SABot(GMBot):
     def chat(self, data):
         if data["name"] != self.name and data["name"] != "GroupMe":
-            if "@everyone" in data["text"]:
+            text = data["text"].lower()
+            if "@everyone" in text:
                 self.at_everyone()
-            if "@jas" in data["text"].lower():
+            if "@jas" in text:
                 self.at_admin()
-            if "!timesheet" in data["text"].lower():
+            if "@jabies" in text:
+                self.at_jabies()
+            if "@failures" in text:
+                self.at_failures()
+            if "!timesheet" in text:
                 msg = "Work Schedule:"
                 img_attachment = {
                     "type": "image",
                     "url": "https://i.groupme.com/720x960.jpeg.7fcab0c0b190458cbac663606ba8970b"
                 }
                 self.send_message(msg, [img_attachment])
-            if "!!!test" in data["text"]:
+            if "!!!test" in text:
                 pass
+
+    def at_jabies(self):
+        member_list = self.get_member_list()
+        jaby_list = []
+        for member in member_list:
+            if "Ginny" in member["name"] or "Jared" in member["name"] \
+                    or "Jadwisiak" in member["name"] or "Archana" in member["name"]:
+                jaby_list += [member]
+        mentions = self.create_multi_mention(jaby_list, (0, 8))
+        for mention in mentions:
+            msg = "UwU rawr notice me senpai"
+            self.send_message(msg, [mention])
+
+    def at_failures(self):
+        member_list = self.get_member_list()
+        fail_list = []
+        for member in member_list:
+            name = member["name"]
+            if "Ceci" in name or "Cindy" in name or "Abby" in name or "Annabel" in name \
+                    or "Lacey" in name or "Emma" in name or "Victoria" in name or "Ysela" in name:
+                fail_list += [member]
+        mentions = self.create_multi_mention(fail_list, (7, 2))
+        for mention in mentions:
+            msg = "It's ok bb at least u tried"
+            self.send_message(msg, [mention])
 
 
 # BOTS
