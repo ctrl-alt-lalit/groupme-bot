@@ -3,14 +3,15 @@ from os import getenv
 
 
 class LFBot(GMBot):
+    """This bot is intended for use in the main dorm-wide chat."""
     ban_list = ["GroupMe"]
 
-    def chat(self, data):  # potentially respond to most recent message
+    def chat(self, data):
         if data["name"] != self.name and data["name"] not in self.ban_list:
             chat_input = str.lower(data["text"])
-            if "@everyone" in chat_input:
+            if "@everyone" in chat_input and self.not_a_freshman(data):
                 self.at_everyone()
-            if "@freshmen" in chat_input:
+            if "@freshmen" in chat_input and self.not_a_freshman(data):
                 self.at_freshmen()
             if "!help" in chat_input:
                 msg = "@{}, I know the following commands: !faq, !movein, !RAs, !launch," \
@@ -46,7 +47,8 @@ class LFBot(GMBot):
             elif "!g " in chat_input:
                 self.use_google(chat_input, command_used="!g ")
 
-    def groupme_events(self, data):  # parse messages from the GroupMe client
+    def groupme_events(self, data):
+        """Parse messages from GroupMe client."""
         greeting = getenv("LF_GROUP_NAME")
 
         def greet_joined_user():
@@ -62,22 +64,21 @@ class LFBot(GMBot):
 
         def greet_added_users():
             def list_added_users():  # create list of new user names from "added" message
-                new_names = data["text"][data["text"].find("added") + 6: data["text"].find("to the group") - 1].split(
-                    ", ")
-                if " and " in new_names[-1]:
-                    last_users = new_names[-1].split(" and ")
-                    new_names[-1] = last_users[0]
-                    new_names += [last_users[1]]
-                return new_names
+                names = data["text"][data["text"].find("added") + 6: data["text"].find("to the group") - 1].split(", ")
+                if " and " in names[-1]:
+                    last_users = names[-1].split(" and ")
+                    names[-1] = last_users[0]
+                    names += [last_users[1]]
+                return names
 
-            new_usernames = list_added_users()
-            new_users = self.get_user_dict(new_usernames)
+            new_names = list_added_users()
+            new_users = self.get_user_dict(new_names)
             for user, user_id in new_users:  # @ users who can be mentioned
                 msg = greeting.format(user, getenv("LF_GROUP_NAME"))
                 mention = {"type": "mentions", "user_ids": [user_id], "loci": [(msg.find("@"), len(user) + 1)]}
                 self.send_message(msg, [mention])
-                new_usernames.remove(user)
-            for name in new_usernames:  # plain text for those who can't be mentioned
+                new_names.remove(user)
+            for name in new_names:  # plain text for those who can't be mentioned
                 msg = greeting.format(name)
                 self.send_message(msg)
 
@@ -86,38 +87,39 @@ class LFBot(GMBot):
         elif "added" in data["text"]:
             greet_added_users()
 
-    def at_freshmen(self):  # mention all the freshmen only
-        member_list = self.get_member_list()
-        for member in member_list:
-            if member["user_id"] in self.get_a_team_ids():
-                member_list.remove(member)
-        msg = "Freshmen, read the GroupMe pls"
+    def at_everyone(self):
+        """Mention every member of a group."""
+        for mention in self.create_multi_mention(self.get_member_list(), bold_location=(0, 8)):
+            self.send_message("Everyone read the GroupMe!", [mention])
+
+    def at_freshmen(self):
+        """Mention every freshman in the group."""
+        member_list = [member for member in self.get_member_list() if member["user_id"] not in self.get_a_team_ids()]
         if member_list:
-            fish_mentions = self.create_multi_mention(member_list, bold_location=(0, 8))
-            for mention in fish_mentions:
-                self.send_message(msg, [mention])
+            for mention in self.create_multi_mention(member_list, bold_location=(0, 8)):
+                self.send_message("Freshmen, read the GroupMe pls", [mention])
 
     def get_a_team_ids(self):
+        """Get the user ids of every non-freshman."""
         a_name_list = getenv("A_TEAM_LIST").split(", ")
-        member_list = self.get_member_list()
-        return [member["name"] for member in member_list if member["name"] in a_name_list]
+        return [member["name"] for member in self.get_member_list() if member["name"] in a_name_list]
 
-    def check_privilege(self, data):  # see if user is authorized to issue command
+    def not_a_freshman(self, data):
+        """See if user is not a freshman."""
         return data["user_id"] in self.get_a_team_ids()
 
     def use_google(self, text, command_used):
+        """Create snide Google search from a message."""
         search_terms = text[text.find(command_used) + len(command_used):].split()
-        if not search_terms:
-            return
-        if search_terms[0][0] == '"':
-            for i, term in enumerate(search_terms):
-                if term[-1] == '"':
-                    search_terms = search_terms[0:i+1]
-                    break
-        url = "http://letmegooglethat.com/?q="
-        for term in search_terms:
-            url += ''.join(ch for ch in term if ch.isalnum()) + "+"  # make term alphanumeric and add it to url
-        url = url[:-1]
-        if url[-1] != '=':
-            self.send_message("use Google\n"+url)
-
+        if search_terms:
+            if search_terms[0][0] == '"':
+                for i, term in enumerate(search_terms):
+                    if term[-1] == '"':
+                        search_terms = search_terms[0:i+1]
+                        break
+            url = "http://letmegooglethat.com/?q="
+            for term in search_terms:
+                url += ''.join(ch for ch in term if ch.isalnum()) + "+"  # make term alphanumeric and add it to url
+            url = url[:-1]
+            if url[-1] != '=' and url[-1] != '+':  # if usable search terms were inputted
+                self.send_message("use Google\n"+url)
