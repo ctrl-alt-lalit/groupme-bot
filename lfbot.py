@@ -1,3 +1,4 @@
+import requests
 from gmbot import GMBot
 from os import getenv
 
@@ -46,8 +47,8 @@ class LFBot(GMBot):
                 self.use_google(chat_input, command_used="!google ")
             elif "!g " in chat_input:
                 self.use_google(chat_input, command_used="!g ")
-            if "!muted" in chat_input:
-                self.num_muted()
+            if "!stats" in chat_input:
+                self.chat_stats()
 
     def groupme_events(self, data):
         """Parse messages from GroupMe client."""
@@ -126,13 +127,28 @@ class LFBot(GMBot):
             if url[-1] != '=' and url[-1] != '+':  # if usable search terms were inputted
                 self.send_message("use Google\n"+url)
 
-    def num_muted(self):
-        """find number of users who have muted the chat"""
-        num_muted = 0
-        list_len = 0
-        for member in self.get_member_list():
-            list_len += 1
-            if member["muted"]:
-                num_muted += 1
-        percent_muted = round(num_muted/list_len * 100)
-        self.send_message("{} users ({} percent) have this chat muted.".format(num_muted, percent_muted))
+    def chat_stats(self):
+
+        def num_muted():
+            """find number of users who have muted the chat"""
+            muted_members = 0
+            list_len = 0
+            for member in self.get_member_list():
+                list_len += 1
+                if member["muted"]:
+                    muted_members += 1
+            percent_muted = round(muted_members / list_len * 100)
+            self.send_message("{} users of {} ({} percent) have this chat muted.".format(muted_members, list_len, percent_muted))
+
+        def a_team_muted():
+            a_team = [member for member in self.get_member_list() if member["name"] in getenv("A_TEAM_LIST")]
+            muted_members = 0
+            for member in a_team:
+                if member["muted"]:
+                    muted_members += 1
+            percent_muted = round(muted_members / len(a_team) * 100)
+            self.send_message("{} SAs/JAs/RAs of {}, ({} percent), have this chat muted".format(muted_members, len(a_team), percent_muted))
+
+        num_muted()
+        a_team_muted()
+
