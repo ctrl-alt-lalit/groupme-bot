@@ -5,7 +5,7 @@ from os import getenv
 
 class LFBot(GMBot):
     """This bot is intended for use in the main dorm-wide chat."""
-    ban_list = ["GroupMe"]
+    ban_list = []
 
     def chat(self, data):
         if data["name"] != self.name and data["name"] not in self.ban_list:
@@ -49,6 +49,8 @@ class LFBot(GMBot):
                 self.use_google(chat_input, command_used="!g ")
             if "!stats" in chat_input:
                 self.chat_stats()
+            if (data["name"] == "GroupMe" and "lalit" not in chat_input and "topic" in chat_input) or "!refresh_desc" in chat_input:
+                self.updateDescription()
 
     def groupme_events(self, data):
         """Parse messages from GroupMe client."""
@@ -151,4 +153,10 @@ class LFBot(GMBot):
 
         num_muted()
         a_team_muted()
+    
+    def updateDescription(self):
+        url = "https://api.groupme.com/v3/groups/" + self.group + "/update"
+        description = getenv("LF_DESC")
+        packet = {"token": getenv("TOKEN"), "description": description}
+        requests.post(url, params=packet)
 
