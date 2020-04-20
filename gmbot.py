@@ -2,10 +2,12 @@ import json
 import requests
 from time import sleep
 from abc import ABC, abstractmethod
-from os import getenv
+from os import environ
 
 
 class GMBot(ABC):
+    env = environ
+
     """Parent class for all GroupMe bots. Necessary bot data and functions that interact with API go here."""
     def __init__(self, bot_id, bot_name, group_id):
         self.id = bot_id
@@ -19,11 +21,11 @@ class GMBot(ABC):
 
     def send_message(self, msg, attachments=()):
         """Send a message in a GroupMe group."""
-        sleep(0.15)  # wait for previous message to get processed by GroupMe
+        sleep(0.3)  # wait for previous message to get processed by GroupMe
         post_url = "https://api.groupme.com/v3/bots/post"
         packet = {
             "bot_id": self.id,
-            "text": msg,
+            "text": str(msg),
             "attachments": attachments
         }
         requests.post(post_url, data=json.dumps(packet))
@@ -41,7 +43,7 @@ class GMBot(ABC):
     def get_member_list(self):
         """Get list of all members in a group."""
         group_url = "https://api.groupme.com/v3/groups/" + self.group
-        token = {"token": getenv("TOKEN")}
+        token = {"token": self.env["TOKEN"]}
         response = requests.get(group_url, params=token)
         members_json = response.json()["response"]["members"]
         return members_json
@@ -65,3 +67,24 @@ class GMBot(ABC):
         user_dict = {member["nickname"]: member["user_id"] for member in self.get_member_list()
                      if member["nickname"] in nicknames}
         return user_dict
+    
+    def update_env_var(self, key, value):
+        header = {
+            "Authorization": "Bearer " + self.env["HEROKU_API_KEY"],
+            "Accept": "application/vnd.heroku+json; version=3",
+            "Content-type": "application/json"
+        }
+        dat = "{" + key + ": " + value + "}" 
+        url = "https://api.heroku.com/apps/" + self.env["APP_NAME"] + "/config-vars"
+        requests.patch(url, headers=header, data=dat)
+        self.env[key] = value
+
+    def update_env(self):
+            headers = {
+                "Authorization": "Bearer {}".format(self.env["HEROKU_API_KEY"]),
+                "Accept": "application/vnd.heroku+json; version=3",
+            }
+            url = "https://api.heroku.com/apps/{}/config-vars".format(self.env["APP_NAME"])
+            self.env = requests.get(url, headers=headers).json()
+
+    

@@ -1,34 +1,38 @@
 import requests
 from gmbot import GMBot
+<<<<<<< HEAD
 from os import getenv
+=======
+from time import sleep
+>>>>>>> 0bea479... can update environmental vars
 
 
 class LFBot(GMBot):
     """This bot is intended for use in the main dorm-wide chat."""
-    ban_list = []
 
     def chat(self, data):
-        if data["name"] != self.name and data["name"] not in self.ban_list:
+        if data["name"] != self.name:
             chat_input = str.lower(data["text"])
             if "@everyone" in chat_input and self.not_a_freshman(data):
                 self.at_everyone()
             if "@freshmen" in chat_input and self.not_a_freshman(data):
                 self.at_freshmen()
             if "!help" in chat_input:
-                msg = "@{}, I know the following commands: !faq, !movein, !RAs, !launch," \
-                      " !code, !core, !registration, !howdy, !g(oogle), @everyone, @freshmen".format(data["name"])
+                msg = "@{}, I know the following commands: !faq, !movein, !RAs, !launch, " \
+                      "!code, !core, !registration, !howdy, !g(oogle), !stats, !refresh_desc, " \
+                      "@everyone, @freshmen".format(data["name"])
                 self.send_message(msg, [self.create_mention(msg, data)])
             if "!faq" in chat_input:
-                self.send_message(getenv("FAQ_URL"))
+                self.send_message(self.env["FAQ_URL"])
             if "!movein" in chat_input:
-                self.send_message(getenv("MOVEIN_URL"))
+                self.send_message(self.env["MOVEIN_URL"])
             if "!launch" in chat_input:
-                self.send_message(getenv("LAUNCH_URL"))
+                self.send_message(self.env["LAUNCH_URL"])
             if "!howdy" in chat_input:
                 msg = "Howdy Week Schedule:"
                 img_attachment = {
                     "type": "image",
-                    "url": "https://i.groupme.com/844x1500.jpeg.4bf577afcfc2404eb55e1c7bcaa1e7c3"
+                    "url": self.env["HOWDY_IMG"]
                 }
                 self.send_message(msg, [img_attachment])
             if "!code" in chat_input:
@@ -36,7 +40,7 @@ class LFBot(GMBot):
                       "https://github.com/lbauskar/GroupmeDormBot".format(data["name"])
                 self.send_message(msg, [self.create_mention(msg, data)])
             if "!ras" in chat_input:
-                self.send_message(getenv("RA_STR"))
+                self.send_message(self.env["RA_STR"])
             if "!core" in chat_input:
                 self.send_message("core.tamu.edu\nicd.tamu.edu")
             if "!registration" in chat_input or "shut up" in chat_input:
@@ -49,16 +53,24 @@ class LFBot(GMBot):
                 self.use_google(chat_input, command_used="!g ")
             if "!stats" in chat_input:
                 self.chat_stats()
+<<<<<<< HEAD
             if (data["name"] == "GroupMe" and "lalit" not in chat_input and "topic" in chat_input) or "!refresh_desc" in chat_input:
                 self.updateDescription()
+=======
+            if "!refresh_desc" in chat_input and self.not_a_freshman(data):
+                self.updateDescription(data["text"], can_edit = True)
+            elif data["name"] == "GroupMe" and "topic" in chat_input:
+                self.updateDescription(data["text"], can_edit = False)
+            
+>>>>>>> 0bea479... can update environmental vars
 
     def groupme_events(self, data):
         """Parse messages from GroupMe client."""
-        greeting = getenv("LF_GROUP_NAME")
+        greeting = self.env["LF_GROUP_NAME"]
 
         def greet_joined_user():
             new_name = data["text"][0: data["text"].find("has joined") - 1]
-            msg = greeting.format(new_name, getenv("LF_GROUP_NAME"))
+            msg = greeting.format(new_name, self.env["LF_GROUP_NAME"])
             new_user = self.get_user_dict([new_name])
             if new_user:
                 mention = {"type": "mentions", "user_ids": [new_user[new_name]],
@@ -79,7 +91,7 @@ class LFBot(GMBot):
             new_names = list_added_users()
             new_users = self.get_user_dict(new_names)
             for user, user_id in new_users:  # @ users who can be mentioned
-                msg = greeting.format(user, getenv("LF_GROUP_NAME"))
+                msg = greeting.format(user, self.env["LF_GROUP_NAME"])
                 mention = {"type": "mentions", "user_ids": [user_id], "loci": [(msg.find("@"), len(user) + 1)]}
                 self.send_message(msg, [mention])
                 new_names.remove(user)
@@ -106,8 +118,8 @@ class LFBot(GMBot):
 
     def get_a_team_ids(self):
         """Get the user ids of every non-freshman."""
-        a_name_list = getenv("A_TEAM_LIST").split(", ")
-        return [member["name"] for member in self.get_member_list() if member["name"] in a_name_list]
+        a_name_list = self.env["A_TEAM_LIST"].split(", ")
+        return [member["user_id"] for member in self.get_member_list() if member["name"] in a_name_list]
 
     def not_a_freshman(self, data):
         """See if user is not a freshman."""
@@ -130,9 +142,8 @@ class LFBot(GMBot):
                 self.send_message("use Google\n"+url)
 
     def chat_stats(self):
-
+        """Display number and percentage of users who have this chat muted."""
         def num_muted():
-            """find number of users who have muted the chat"""
             muted_members = 0
             list_len = 0
             for member in self.get_member_list():
@@ -143,7 +154,7 @@ class LFBot(GMBot):
             self.send_message("{} users of {} ({} percent) have this chat muted.".format(muted_members, list_len, percent_muted))
 
         def a_team_muted():
-            a_team = [member for member in self.get_member_list() if member["name"] in getenv("A_TEAM_LIST")]
+            a_team = [member for member in self.get_member_list() if member["name"] in self.env["A_TEAM_LIST"]]
             muted_members = 0
             for member in a_team:
                 if member["muted"]:
@@ -154,9 +165,18 @@ class LFBot(GMBot):
         num_muted()
         a_team_muted()
     
-    def updateDescription(self):
-        url = "https://api.groupme.com/v3/groups/" + self.group + "/update"
-        description = getenv("LF_DESC")
-        packet = {"token": getenv("TOKEN"), "description": description}
+    def updateDescription(self, text, can_edit):
+        if can_edit:
+            description = text[text.find("!refresh_desc") + len("!refresh_desc"):].strip()
+            self.update_env_var("LF_DESC", description)
+        sleep(1) #wait for environment variable to update
+        url = "https://api.groupme.com/v3/groups/{}/update".format(self.group)
+        packet = {"token": self.env["TOKEN"], "description": self.env["LF_DESC"]}
         requests.post(url, params=packet)
 
+<<<<<<< HEAD
+=======
+
+
+    
+>>>>>>> 0bea479... can update environmental vars

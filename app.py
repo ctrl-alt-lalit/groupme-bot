@@ -7,6 +7,10 @@ from sabot import SABot
 
 app = Flask(__name__)
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0bea479... can update environmental vars
 test_bot = LFBot(getenv("TEST_BOT_ID"), getenv("TEST_BOT_NAME"), getenv("TEST_GROUP_ID"))
 @app.route("/test", methods=["POST"])
 def read_test_group():

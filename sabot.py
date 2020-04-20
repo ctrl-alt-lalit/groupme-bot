@@ -1,5 +1,4 @@
 from gmbot import GMBot
-from os import getenv
 
 
 class SABot(GMBot):
@@ -19,7 +18,7 @@ class SABot(GMBot):
             if "@failures" in text:
                 self.at_failures()
             if "!timesheet" in text:
-                img_attachment = {"type": "image", "url": getenv("TIMESHEET_URL")}
+                img_attachment = {"type": "image", "url": self.env["TIMESHEET_URL"]}
                 self.send_message("Work Schedule:", [img_attachment])
 
     def at_everyone(self):
@@ -35,14 +34,14 @@ class SABot(GMBot):
 
     def at_jabies(self):
         """Mention every upcoming JA."""
-        jaby_list = getenv("JABY_LIST").split(", ")
+        jaby_list = self.env["JABY_LIST"].split(", ")
         mention_list = [member for member in self.get_member_list() if member["name"] in jaby_list]
         for mention in self.create_multi_mention(mention_list, bold_location=(12, 9)):
             self.send_message(msg="UwU rawr x3 *nuzzles* notice me senpai", attachments=[mention])
 
     def at_failures(self):
         """Mention everyone who applied to be a JA but didn't get accepted."""
-        failure_list = getenv("FAILURE_LIST").split(", ")
+        failure_list = self.env["FAILURE_LIST"].split(", ")
         mention_list = [member for member in self.get_member_list() if member["name"] in failure_list]
         for mention in self.create_multi_mention(mention_list, bold_location=(8, 2)):
             self.send_message(msg="It's ok bb at least u tried", attachments=[mention])
