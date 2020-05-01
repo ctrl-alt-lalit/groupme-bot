@@ -18,8 +18,7 @@ class SABot(GMBot):
             if "@failures" in text:
                 self.at_failures()
             if "!timesheet" in text:
-                img_attachment = {"type": "image", "url": self.env["TIMESHEET_URL"]}
-                self.send_message("Work Schedule:", [img_attachment])
+                self.send_message("Work Schedule:", [self.create_image_attachment("TIMESHEET_URL")])
 
     def at_everyone(self):
         """Mention every member of a group."""

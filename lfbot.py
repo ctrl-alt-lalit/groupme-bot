@@ -30,11 +30,7 @@ class LFBot(GMBot):
                 self.send_message(self.env["LAUNCH_URL"])
             if "!howdy" in chat_input:
                 msg = "Howdy Week Schedule:"
-                img_attachment = {
-                    "type": "image",
-                    "url": self.env["HOWDY_IMG"]
-                }
-                self.send_message(msg, [img_attachment])
+                self.send_message(msg, [self.create_image_attachment("HOWDY_IMG")])
             if "!code" in chat_input:
                 msg = "@{} my github repository (source code) can be found at " \
                       "https://github.com/lbauskar/GroupmeDormBot".format(data["name"])
@@ -54,6 +50,7 @@ class LFBot(GMBot):
             if "!stats" in chat_input:
                 self.chat_stats()
 <<<<<<< HEAD
+<<<<<<< HEAD
             if (data["name"] == "GroupMe" and "lalit" not in chat_input and "topic" in chat_input) or "!refresh_desc" in chat_input:
                 self.updateDescription()
 =======
@@ -61,25 +58,43 @@ class LFBot(GMBot):
                 self.updateDescription(data["text"], can_edit = True)
             elif data["name"] == "GroupMe" and "topic" in chat_input:
                 self.updateDescription(data["text"], can_edit = False)
+=======
+            if "!uimg" in chat_input:
+                self.update_img(data, "IMG_URL")
+            if "!img" in chat_input:
+                self.send_message("", [self.create_image_attachment("IMG_URL")])
+>>>>>>> 350fc17... image updating
             
 >>>>>>> 0bea479... can update environmental vars
 
     def groupme_events(self, data):
         """Parse messages from GroupMe client."""
-        greeting = self.env["LF_GROUP_NAME"]
+        greeting = self.env["LF_GREETING"]
 
-        def greet_joined_user():
-            new_name = data["text"][0: data["text"].find("has joined") - 1]
-            msg = greeting.format(new_name, self.env["LF_GROUP_NAME"])
-            new_user = self.get_user_dict([new_name])
-            if new_user:
-                mention = {"type": "mentions", "user_ids": [new_user[new_name]],
-                           "loci": [(msg.find("@"), len(new_name) + 1)]}
+        def send_greeting_message(name, user_id = None):
+            """Send a greeting to a user who just joined the chat."""
+            msg = greeting.format(name, self.env["LF_GREETING"])
+            if user_id:
+                mention = {
+                    "type": "mentions",
+                    "user_ids": [user_id],
+                    "loci": [(msg.find("@"), len(name) + 1)]
+                }
                 self.send_message(msg, [mention])
             else:
                 self.send_message(msg)
 
+        def greet_joined_user():
+            """Greet the one user added to the chat."""
+            new_name = data["text"][0: data["text"].find("has joined") - 1]
+            new_user = self.get_user_dict([new_name])
+            if new_user:
+                send_greeting_message(new_name, new_user[new_name])
+            else:
+                self.send_message(new_name)
+
         def greet_added_users():
+            """Greet multiple users who were added to the chat."""
             def list_added_users():  # create list of new user names from "added" message
                 names = data["text"][data["text"].find("added") + 6: data["text"].find("to the group") - 1].split(", ")
                 if " and " in names[-1]:
@@ -90,14 +105,12 @@ class LFBot(GMBot):
 
             new_names = list_added_users()
             new_users = self.get_user_dict(new_names)
-            for user, user_id in new_users:  # @ users who can be mentioned
-                msg = greeting.format(user, self.env["LF_GROUP_NAME"])
-                mention = {"type": "mentions", "user_ids": [user_id], "loci": [(msg.find("@"), len(user) + 1)]}
-                self.send_message(msg, [mention])
-                new_names.remove(user)
+            for name, user_id in new_users:  # @ users who can be mentioned
+                send_greeting_message(name, user_id)
+                new_names.remove(name)
             for name in new_names:  # plain text for those who can't be mentioned
-                msg = greeting.format(name)
-                self.send_message(msg)
+                send_greeting_message(name)
+        
 
         if "has joined" in data["text"]:
             greet_joined_user()
@@ -165,6 +178,7 @@ class LFBot(GMBot):
         num_muted()
         a_team_muted()
     
+<<<<<<< HEAD
     def updateDescription(self, text, can_edit):
         if can_edit:
             description = text[text.find("!refresh_desc") + len("!refresh_desc"):].strip()
@@ -176,6 +190,14 @@ class LFBot(GMBot):
 
 <<<<<<< HEAD
 =======
+=======
+    def update_img(self, data, image_token: str):
+        attachments = data["attachments"]
+        for attachment in attachments:
+            if attachment["type"] == "image":
+                self.update_env_var(image_token, attachment["url"])
+                break
+>>>>>>> 350fc17... image updating
 
 
     

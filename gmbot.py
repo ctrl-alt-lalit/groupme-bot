@@ -3,6 +3,7 @@ import requests
 from time import sleep
 from abc import ABC, abstractmethod
 from os import environ
+from json import dumps
 
 
 class GMBot(ABC):
@@ -74,9 +75,9 @@ class GMBot(ABC):
             "Accept": "application/vnd.heroku+json; version=3",
             "Content-type": "application/json"
         }
-        dat = "{" + key + ": " + value + "}" 
+        dat = {key: value}
         url = "https://api.heroku.com/apps/" + self.env["APP_NAME"] + "/config-vars"
-        requests.patch(url, headers=header, data=dat)
+        r = requests.patch(url, headers=header, data=json.dumps(dat))
         self.env[key] = value
 
     def update_env(self):
@@ -87,4 +88,9 @@ class GMBot(ABC):
             url = "https://api.heroku.com/apps/{}/config-vars".format(self.env["APP_NAME"])
             self.env = requests.get(url, headers=headers).json()
 
-    
+    def create_image_attachment(self, image_token: str):
+        attachment = {
+            "type": "image",
+            "url": self.env[image_token]
+        }
+        return attachment
