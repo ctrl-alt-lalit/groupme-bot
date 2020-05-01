@@ -6,7 +6,7 @@ from os import environ
 from json import dumps
 
 
-class GMBot(ABC):
+class GroupMeBot(ABC):
     env = environ
 
     """Parent class for all GroupMe bots. Necessary bot data and functions that interact with API go here."""
@@ -42,7 +42,7 @@ class GMBot(ABC):
         return mention
 
     def get_member_list(self):
-        """Get list of all members in a group."""
+        """Get a list of all members in a group."""
         group_url = "https://api.groupme.com/v3/groups/" + self.group
         token = {"token": self.env["TOKEN"]}
         response = requests.get(group_url, params=token)
@@ -52,7 +52,7 @@ class GMBot(ABC):
     @staticmethod
     def create_multi_mention(member_list, bold_location):
         """Create mention attachment(s) with multiple users' IDs."""
-        max_mentions_per_msg = 47  # undocumented value determined by GroupMe API, # of users you can mention at once
+        max_mentions_per_msg = 47  # Maximum number of users you can mention in one attachment
         loci = [bold_location] * max_mentions_per_msg
         user_ids = [member["user_id"] for member in member_list]
         mention_list = []
@@ -70,6 +70,7 @@ class GMBot(ABC):
         return user_dict
     
     def update_env_var(self, key, value):
+        """Change an environmental variable on the Heroku server."""
         header = {
             "Authorization": "Bearer " + self.env["HEROKU_API_KEY"],
             "Accept": "application/vnd.heroku+json; version=3",
@@ -81,12 +82,13 @@ class GMBot(ABC):
         self.env[key] = value
 
     def update_env(self):
-            headers = {
-                "Authorization": "Bearer {}".format(self.env["HEROKU_API_KEY"]),
-                "Accept": "application/vnd.heroku+json; version=3",
-            }
-            url = "https://api.heroku.com/apps/{}/config-vars".format(self.env["APP_NAME"])
-            self.env = requests.get(url, headers=headers).json()
+        """Get the most current environment variables from the Heroku server."""
+        headers = {
+            "Authorization": "Bearer {}".format(self.env["HEROKU_API_KEY"]),
+            "Accept": "application/vnd.heroku+json; version=3",
+        }
+        url = "https://api.heroku.com/apps/{}/config-vars".format(self.env["APP_NAME"])
+        self.env = requests.get(url, headers=headers).json()
 
     def create_image_attachment(self, image_token: str):
         attachment = {
@@ -94,3 +96,11 @@ class GMBot(ABC):
             "url": self.env[image_token]
         }
         return attachment
+    
+    def update_image(self, data, image_token: str):
+        """Update an image url int the environment if the user attached a picture to their message."""
+        attachments = data["attachments"]
+        for attachment in attachments:
+            if attachment["type"] == "image":
+                self.update_env_var(image_token, attachment["url"])
+                break

@@ -1,7 +1,7 @@
-from gmbot import GMBot
+from gmbot import GroupMeBot
 
 
-class SABot(GMBot):
+class SABot(GroupMeBot):
     """This bot is intended for use in the SA chat."""
     def chat(self, data):
         if data["name"] != self.name and data["name"] != "GroupMe":
@@ -19,6 +19,8 @@ class SABot(GMBot):
                 self.at_failures()
             if "!timesheet" in text:
                 self.send_message("Work Schedule:", [self.create_image_attachment("TIMESHEET_URL")])
+            if "!update_timesheet" in text:
+                self.update_image(data, "TIMESHEET_URL")
 
     def at_everyone(self):
         """Mention every member of a group."""

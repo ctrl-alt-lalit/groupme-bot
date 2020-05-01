@@ -1,13 +1,10 @@
 import requests
-from gmbot import GMBot
-<<<<<<< HEAD
+from gmbot import GroupMeBot
 from os import getenv
-=======
 from time import sleep
->>>>>>> 0bea479... can update environmental vars
+from random import choice
 
-
-class LFBot(GMBot):
+class LFBot(GroupMeBot):
     """This bot is intended for use in the main dorm-wide chat."""
 
     def chat(self, data):
@@ -31,6 +28,8 @@ class LFBot(GMBot):
             if "!howdy" in chat_input:
                 msg = "Howdy Week Schedule:"
                 self.send_message(msg, [self.create_image_attachment("HOWDY_IMG")])
+            if "!update_howdy" in chat_input:
+                self.update_image(data, "HOWDY_IMG")
             if "!code" in chat_input:
                 msg = "@{} my github repository (source code) can be found at " \
                       "https://github.com/lbauskar/GroupmeDormBot".format(data["name"])
@@ -49,25 +48,14 @@ class LFBot(GMBot):
                 self.use_google(chat_input, command_used="!g ")
             if "!stats" in chat_input:
                 self.chat_stats()
-<<<<<<< HEAD
-<<<<<<< HEAD
-            if (data["name"] == "GroupMe" and "lalit" not in chat_input and "topic" in chat_input) or "!refresh_desc" in chat_input:
-                self.updateDescription()
-=======
-            if "!refresh_desc" in chat_input and self.not_a_freshman(data):
-                self.updateDescription(data["text"], can_edit = True)
-            elif data["name"] == "GroupMe" and "topic" in chat_input:
-                self.updateDescription(data["text"], can_edit = False)
-=======
             if "!uimg" in chat_input:
-                self.update_img(data, "IMG_URL")
+                self.update_image(data, "IMG_URL")
             if "!img" in chat_input:
                 self.send_message("", [self.create_image_attachment("IMG_URL")])
->>>>>>> 350fc17... image updating
-            
->>>>>>> 0bea479... can update environmental vars
+            if data["name"] == "GroupMe":
+                self.respond_to_groupme_events(data)
 
-    def groupme_events(self, data):
+    def respond_to_groupme_events(self, data):
         """Parse messages from GroupMe client."""
         greeting = self.env["LF_GREETING"]
 
@@ -111,11 +99,21 @@ class LFBot(GMBot):
             for name in new_names:  # plain text for those who can't be mentioned
                 send_greeting_message(name)
         
+        def say_goodbye():
+            goodbyes = self.env["LF_GOODBYES"].split(", ")
+            goodbye = choice(goodbyes)
+            if "{}" in goodbye:
+                name = data["text"][0: data["text"].find(" has left")]
+                goodbye = goodbye.format(name)
+            self.send_message(goodbye)
+        
 
         if "has joined" in data["text"]:
             greet_joined_user()
         elif "added" in data["text"]:
             greet_added_users()
+        elif "has left" in data["text"]:
+            say_goodbye()
 
     def at_everyone(self):
         """Mention every member of a group."""
@@ -177,28 +175,4 @@ class LFBot(GMBot):
 
         num_muted()
         a_team_muted()
-    
-<<<<<<< HEAD
-    def updateDescription(self, text, can_edit):
-        if can_edit:
-            description = text[text.find("!refresh_desc") + len("!refresh_desc"):].strip()
-            self.update_env_var("LF_DESC", description)
-        sleep(1) #wait for environment variable to update
-        url = "https://api.groupme.com/v3/groups/{}/update".format(self.group)
-        packet = {"token": self.env["TOKEN"], "description": self.env["LF_DESC"]}
-        requests.post(url, params=packet)
 
-<<<<<<< HEAD
-=======
-=======
-    def update_img(self, data, image_token: str):
-        attachments = data["attachments"]
-        for attachment in attachments:
-            if attachment["type"] == "image":
-                self.update_env_var(image_token, attachment["url"])
-                break
->>>>>>> 350fc17... image updating
-
-
-    
->>>>>>> 0bea479... can update environmental vars
