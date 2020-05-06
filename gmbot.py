@@ -20,7 +20,7 @@ class GroupMeBot(ABC):
         """Read and respond to chat messages."""
         pass
 
-    def send_message(self, msg, attachments=()):
+    def send_message(self, msg, attachments=(), debug = False):
         """Send a message in a GroupMe group."""
         sleep(0.3)  # wait for previous message to get processed by GroupMe
         post_url = "https://api.groupme.com/v3/bots/post"
@@ -29,7 +29,10 @@ class GroupMeBot(ABC):
             "text": str(msg),
             "attachments": attachments
         }
-        requests.post(post_url, data=json.dumps(packet))
+        r =  requests.post(post_url, data=json.dumps(packet))
+        if debug:
+            self.send_message(r.status_code)
+            self.send_message(r.text)
 
     @staticmethod
     def create_mention(msg, data):
@@ -98,9 +101,11 @@ class GroupMeBot(ABC):
         return attachment
     
     def update_image(self, data, image_token: str):
-        """Update an image url int the environment if the user attached a picture to their message."""
+        """Update an image url int the environment if the user attached a picture to their message.
+        Return False if the user did not attach an image."""
         attachments = data["attachments"]
         for attachment in attachments:
             if attachment["type"] == "image":
                 self.update_env_var(image_token, attachment["url"])
-                break
+                return True
+        return False

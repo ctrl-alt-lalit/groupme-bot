@@ -7,7 +7,7 @@ class SABot(GroupMeBot):
         if data["name"] != self.name and data["name"] != "GroupMe":
             text = data["text"].lower()
             if "!help" in text:
-                msg = "I can do these things: @everyone, @JAs, @JAbies, !timesheet, and one secret command!"
+                msg = "I can do these things: @everyone, @JAs, @JAbies, !timesheet, !update_timesheet"
                 self.send_message(msg)
             if "@everyone" in text:
                 self.at_everyone()
@@ -18,9 +18,10 @@ class SABot(GroupMeBot):
             if "@failures" in text:
                 self.at_failures()
             if "!timesheet" in text:
-                self.send_message("Work Schedule:", [self.create_image_attachment("TIMESHEET_URL")])
+                self.send_message("Work Schedule:", [self.create_image_attachment("TIMESHEET_IMG")])
             if "!update_timesheet" in text:
-                self.update_image(data, "TIMESHEET_URL")
+                if not self.update_image(data, "TIMESHEET_IMG"):
+                    self.send_message("Please attach the image you want to replace the timesheet with.")
 
     def at_everyone(self):
         """Mention every member of a group."""

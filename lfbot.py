@@ -15,9 +15,7 @@ class LFBot(GroupMeBot):
             if "@freshmen" in chat_input and self.not_a_freshman(data):
                 self.at_freshmen()
             if "!help" in chat_input:
-                msg = "@{}, I know the following commands: !faq, !movein, !RAs, !launch, " \
-                      "!code, !core, !registration, !howdy, !g(oogle), !stats, !refresh_desc, " \
-                      "@everyone, @freshmen".format(data["name"])
+                msg = self.env["LF_HELP_STR"].format(data["name"])
                 self.send_message(msg, [self.create_mention(msg, data)])
             if "!faq" in chat_input:
                 self.send_message(self.env["FAQ_URL"])
@@ -48,12 +46,10 @@ class LFBot(GroupMeBot):
                 self.use_google(chat_input, command_used="!g ")
             if "!stats" in chat_input:
                 self.chat_stats()
-            if "!uimg" in chat_input:
-                self.update_image(data, "IMG_URL")
-            if "!img" in chat_input:
-                self.send_message("", [self.create_image_attachment("IMG_URL")])
             if data["name"] == "GroupMe":
                 self.respond_to_groupme_events(data)
+            if "!scalp" in chat_input:
+                self.send_message(data, debug=True)
 
     def respond_to_groupme_events(self, data):
         """Parse messages from GroupMe client."""
@@ -100,8 +96,7 @@ class LFBot(GroupMeBot):
                 send_greeting_message(name)
         
         def say_goodbye():
-            goodbyes = self.env["LF_GOODBYES"].split(", ")
-            goodbye = choice(goodbyes)
+            goodbye = choice(self.env["LF_GOODBYES"].split(", "))
             if "{}" in goodbye:
                 name = data["text"][0: data["text"].find(" has left")]
                 goodbye = goodbye.format(name)
@@ -154,23 +149,25 @@ class LFBot(GroupMeBot):
 
     def chat_stats(self):
         """Display number and percentage of users who have this chat muted."""
+        # Can't send % sign to GroupMe. Results in response code 500: Internal Server Error.
         def num_muted():
             muted_members = 0
-            list_len = 0
-            for member in self.get_member_list():
-                list_len += 1
+            members = self.get_member_list()
+            for member in members:
                 if member["muted"]:
                     muted_members += 1
-            percent_muted = round(muted_members / list_len * 100)
-            self.send_message("{} users of {} ({} percent) have this chat muted.".format(muted_members, list_len, percent_muted))
+            percent_muted = round(muted_members / len(members) * 100)
+            self.send_message("{} users of {}, ({} percent), have this chat muted.".format(muted_members, len(members), percent_muted))
 
         def a_team_muted():
-            a_team = [member for member in self.get_member_list() if member["name"] in self.env["A_TEAM_LIST"]]
+            a_team = [member for member in self.get_member_list() if member["user_id"] in self.env["A_TEAM_LIST"]]
+            if (len(a_team) == 0):
+                return
             muted_members = 0
             for member in a_team:
                 if member["muted"]:
                     muted_members += 1
-            percent_muted = round(muted_members / len(a_team) * 100)
+            percent_muted = str(round(muted_members / len(a_team) * 100))
             self.send_message("{} SAs/JAs/RAs of {}, ({} percent), have this chat muted".format(muted_members, len(a_team), percent_muted))
 
         num_muted()
