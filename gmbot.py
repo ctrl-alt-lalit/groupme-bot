@@ -2,13 +2,11 @@ import json
 import requests
 from time import sleep
 from abc import ABC, abstractmethod
-from os import environ
+from os import environ, getenv
 from json import dumps
 
 
 class GroupMeBot(ABC):
-    env = environ
-
     """Parent class for all GroupMe bots. Necessary bot data and functions that interact with API go here."""
     def __init__(self, bot_id, bot_name, group_id):
         self.id = bot_id
@@ -22,7 +20,7 @@ class GroupMeBot(ABC):
 
     def send_message(self, msg, attachments=(), debug = False):
         """Send a message in a GroupMe group."""
-        sleep(0.3)  # wait for previous message to get processed by GroupMe
+        sleep(0.3)  # wait for previous message to get shown to users
         post_url = "https://api.groupme.com/v3/bots/post"
         packet = {
             "bot_id": self.id,
@@ -47,7 +45,7 @@ class GroupMeBot(ABC):
     def get_member_list(self):
         """Get a list of all members in a group."""
         group_url = "https://api.groupme.com/v3/groups/" + self.group
-        token = {"token": self.env["TOKEN"]}
+        token = {"token": getenv("TOKEN")}
         response = requests.get(group_url, params=token)
         members_json = response.json()["response"]["members"]
         return members_json
@@ -75,28 +73,29 @@ class GroupMeBot(ABC):
     def update_env_var(self, key, value):
         """Change an environmental variable on the Heroku server."""
         header = {
-            "Authorization": "Bearer " + self.env["HEROKU_API_KEY"],
+            "Authorization": "Bearer " + getenv("HEROKU_API_KEY"),
             "Accept": "application/vnd.heroku+json; version=3",
             "Content-type": "application/json"
         }
         dat = {key: value}
-        url = "https://api.heroku.com/apps/" + self.env["APP_NAME"] + "/config-vars"
+        url = "https://api.heroku.com/apps/" + getenv("APP_NAME") + "/config-vars"
         r = requests.patch(url, headers=header, data=json.dumps(dat))
-        self.env[key] = value
+        environ[key] = value  #if key is new, doing this can cause a memory leak
 
     def update_env(self):
-        """Get the most current environment variables from the Heroku server."""
+        """UNTESTED FUNCTION!!! Get the most current environment variables from the Heroku server."""
         headers = {
-            "Authorization": "Bearer {}".format(self.env["HEROKU_API_KEY"]),
+            "Authorization": "Bearer {}".format(getenv("HEROKU_API_KEY")),
             "Accept": "application/vnd.heroku+json; version=3",
         }
-        url = "https://api.heroku.com/apps/{}/config-vars".format(self.env["APP_NAME"])
-        self.env = requests.get(url, headers=headers).json()
+        url = "https://api.heroku.com/apps/{}/config-vars".format(getenv("APP_NAME"))
+        environ = requests.get(url, headers=headers).json() #could cause a memory leak, unsure
 
     def create_image_attachment(self, image_token: str):
+        """Automatically make a 1-image attachment. Takes environmental key, NOT the image url, as input."""
         attachment = {
             "type": "image",
-            "url": self.env[image_token]
+            "url": getenv(image_token)
         }
         return attachment
     

@@ -8,56 +8,56 @@ class LFBot(GroupMeBot):
     """This bot is intended for use in the main dorm-wide chat."""
 
     def chat(self, data):
+        if data["name"] == "GroupMe":
+                self.respond_to_groupme_events(data)
+
         if data["name"] != self.name:
-            chat_input = str.lower(data["text"])
-            if "@everyone" in chat_input and self.not_a_freshman(data):
-                self.at_everyone()
-            if "@freshmen" in chat_input and self.not_a_freshman(data):
-                self.at_freshmen()
-            if "!help" in chat_input:
-                msg = self.env["LF_HELP_STR"].format(data["name"])
+            text = str.lower(data["text"])
+            if "!help" in text:
+                msg = getenv("LF_HELP_STR").format(data["name"])
                 self.send_message(msg, [self.create_mention(msg, data)])
-            if "!faq" in chat_input:
-                self.send_message(self.env["FAQ_URL"])
-            if "!movein" in chat_input:
-                self.send_message(self.env["MOVEIN_URL"])
-            if "!launch" in chat_input:
-                self.send_message(self.env["LAUNCH_URL"])
-            if "!howdy" in chat_input:
+            if "!faq" in text:
+                self.send_message(getenv("FAQ_URL"))
+            if "!movein" in text:
+                self.send_message(getenv("MOVEIN_URL"))
+            if "!launch" in text:
+                self.send_message(getenv("LAUNCH_URL"))
+            if "!howdy" in text:
                 msg = "Howdy Week Schedule:"
                 self.send_message(msg, [self.create_image_attachment("HOWDY_IMG")])
-            if "!update_howdy" in chat_input:
-                self.update_image(data, "HOWDY_IMG")
-            if "!code" in chat_input:
+            if "!code" in text:
                 msg = "@{} my github repository (source code) can be found at " \
                       "https://github.com/lbauskar/GroupmeDormBot".format(data["name"])
                 self.send_message(msg, [self.create_mention(msg, data)])
-            if "!ras" in chat_input:
-                self.send_message(self.env["RA_STR"])
-            if "!core" in chat_input:
+            if "!ras" in text:
+                self.send_message(getenv("RA_STR"))
+            if "!core" in text:
                 self.send_message("core.tamu.edu\nicd.tamu.edu")
-            if "!registration" in chat_input or "shut up" in chat_input:
+            if "!registration" in text or "shut up" in text:
                 msg = "Yes, more seats will open for your classes. No we don't know when. " \
                       "Check your major's catalog for what classes to take."
                 self.send_message(msg)
-            if "!google " in chat_input:
-                self.use_google(chat_input, command_used="!google ")
-            elif "!g " in chat_input:
-                self.use_google(chat_input, command_used="!g ")
-            if "!stats" in chat_input:
+            if "!google " in text:
+                self.use_google(text, command_used="!google ")
+            elif "!g " in text:
+                self.use_google(text, command_used="!g ")
+            if "!stats" in text:
                 self.chat_stats()
-            if data["name"] == "GroupMe":
-                self.respond_to_groupme_events(data)
-            if "!scalp" in chat_input:
-                self.send_message(data, debug=True)
-
+            if self.not_a_freshman(data): #non-freshmen exclusive commands
+                if "@everyone" in text:
+                    self.at_everyone()
+                if "@freshmen" in text:
+                    self.at_freshmen()
+                if "!update_howdy" in text and not self.update_image(data, "HOWDY_IMG"):
+                    self.send_message("Please attach an image.")
+                
     def respond_to_groupme_events(self, data):
         """Parse messages from GroupMe client."""
-        greeting = self.env["LF_GREETING"]
+        greeting = getenv("LF_GREETING")
 
         def send_greeting_message(name, user_id = None):
             """Send a greeting to a user who just joined the chat."""
-            msg = greeting.format(name, self.env["LF_GREETING"])
+            msg = greeting.format(name)
             if user_id:
                 mention = {
                     "type": "mentions",
@@ -96,9 +96,10 @@ class LFBot(GroupMeBot):
                 send_greeting_message(name)
         
         def say_goodbye():
-            goodbye = choice(self.env["LF_GOODBYES"].split(", "))
+            """Send randomized farewell in response to a user leaving the chat."""
+            goodbye = choice(getenv("LF_GOODBYES").split(", "))
             if "{}" in goodbye:
-                name = data["text"][0: data["text"].find(" has left")]
+                name = data["text"][:data["text"].find(" has left")]
                 goodbye = goodbye.format(name)
             self.send_message(goodbye)
         
@@ -124,7 +125,7 @@ class LFBot(GroupMeBot):
 
     def get_a_team_ids(self):
         """Get the user ids of every non-freshman."""
-        a_name_list = self.env["A_TEAM_LIST"].split(", ")
+        a_name_list = getenv("A_TEAM_LIST").split(", ")
         return [member["user_id"] for member in self.get_member_list() if member["name"] in a_name_list]
 
     def not_a_freshman(self, data):
@@ -160,7 +161,7 @@ class LFBot(GroupMeBot):
             self.send_message("{} users of {}, ({} percent), have this chat muted.".format(muted_members, len(members), percent_muted))
 
         def a_team_muted():
-            a_team = [member for member in self.get_member_list() if member["user_id"] in self.env["A_TEAM_LIST"]]
+            a_team = [member for member in self.get_member_list() if member["user_id"] in getenv("A_TEAM_LIST")]
             if (len(a_team) == 0):
                 return
             muted_members = 0
