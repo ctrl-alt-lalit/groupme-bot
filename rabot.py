@@ -12,5 +12,5 @@ class RABot(GroupMeBot):
 
     def at_everyone(self):
         """Mention every member of a group."""
-        for mention in self.create_multi_mention(self.get_member_list(), bold_location=(0, 3)):
-            self.send_message(msg="sup", attachments=[mention])
+        for mention in self.create_multi_mention(self.get_member_list(), bold_location=(0, 8)):
+            self.send_message(msg="Everyone read the chat please", attachments=[mention])
